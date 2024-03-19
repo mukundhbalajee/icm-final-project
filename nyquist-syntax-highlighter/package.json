@@ -1,0 +1,25 @@
+{
+  "name": "nyquist-syntax-highlighter",
+  "displayName": "Nyquist Syntax Highlighter",
+  "description": "A syntax highlighter of the Nyquist programming language",
+  "version": "0.0.1",
+  "engines": {
+    "vscode": "^1.87.0"
+  },
+  "categories": [
+    "Programming Languages"
+  ],
+  "contributes": {
+    "languages": [{
+      "id": "sal",
+      "aliases": ["Nyquist", "sal"],
+      "extensions": [".sal"],
+      "configuration": "./language-configuration.json"
+    }],
+    "grammars": [{
+      "language": "sal",
+      "scopeName": "",
+      "path": "./syntaxes/sal.tmLanguage.json"
+    }]
+  }
+}
