@@ -12,9 +12,29 @@
 				{ "include": "#comment" }, 
 				{ "include": "#keywords" }, 
 				{ "include": "#strings" }, 
-				{"include": "#function"}
+				{ "include": "#function" },
+				{ "include": "#variables" }
 			]
 		  },
+		"variables": {
+			"patterns": [
+				{
+					"comment": "Booleans",
+					"name": "variable.other.bool.sal",
+					"match": "#f|#t"
+				},
+				{
+					"comment": "Nil",
+					"name": "variable.other.nil.sal",
+					"match": "nil"
+				},
+				{
+					"comment": "Notes",
+					"name": "variable.other.chords.sal",
+					"match": "[a-gA-G][1-8]"
+				}
+			]
+		},
 		"function": {
 			"patterns": [
 			  {
@@ -45,10 +65,16 @@
 			"name": "comment.line.sal"
 		},
 		"keywords": {
-			"patterns": [{
-				"name": "keyword.control.sal",
-				"match": "\\b(if|while|for|return|then|set|define function|with|begin|end|finally|display|function)\\b"
-			}]
+			"patterns": [
+				{
+					"name": "keyword.control.sal",
+					"match": "\\b(if|while|for|return|then|set|define function|begin|end|finally|loop)\\b"
+				},
+				{
+					"name": "keyword.control.less",
+					"match": "\\b(variable|set|with)\\b"
+				}
+			]
 		},
 		"strings": {
 			"name": "string.quoted.double.sal",
