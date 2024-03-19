@@ -3,20 +3,35 @@
 	"name": "Nyquist",
 	"patterns": [
 		{
-			"include": "#keywords"
-		},
-		{
-			"include": "#strings"
-		},
-		{
-			"include": "#comments"
+			"include": "#expression"
 		}
 	],
 	"repository": {
+		"expression": {
+			"patterns": [{ "include": "#comment" }, { "include": "#keywords" }, { "include": "#strings" }, {"include": "#parameter"}]
+		  },
+		"parameter": {
+			"name": "comment.line.sal",
+			"patterns": [
+				{
+					"name": "variable.parameter.sal",
+					"match": "[a-zA-Z-]+:"
+				}
+			]
+		},
+		"user-variables": {
+			"name": "variable.sal",
+			"match": "\\b([a-zA-Z0-9_-]*)\\b"
+		},
+		"comment": {
+			"begin": ";",
+			"end": "\\n",
+			"name": "comment.line.sal"
+		},
 		"keywords": {
 			"patterns": [{
 				"name": "keyword.control.sal",
-				"match": "\\b(if|while|for|return)\\b"
+				"match": "\\b(if|while|for|return|then|set|define function|with|begin|end|finally|display|function)\\b"
 			}]
 		},
 		"strings": {
@@ -31,5 +46,5 @@
 			]
 		}
 	},
-	"scopeName": ""
+	"scopeName": "source.sal"
 }

@@ -18,7 +18,7 @@
     }],
     "grammars": [{
       "language": "sal",
-      "scopeName": "",
+      "scopeName": "source.sal",
       "path": "./syntaxes/sal.tmLanguage.json"
     }]
   }
