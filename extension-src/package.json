@@ -33,6 +33,26 @@
         "command": "code-symphony.openInBrowser",
         "title": "Open in Browser"
       }
+    ],
+    "languages": [
+      {
+        "id": "sal",
+        "aliases": [
+          "Nyquist",
+          "sal"
+        ],
+        "extensions": [
+          ".sal"
+        ],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "sal",
+        "scopeName": "source.sal",
+        "path": "./syntaxes/sal.tmLanguage.json"
+      }
     ]
   },
   "scripts": {
