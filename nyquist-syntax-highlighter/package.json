@@ -10,6 +10,11 @@
     "Programming Languages"
   ],
   "contributes": {
+    "themes": [{
+      "label": "Main color theme",
+      "uiTheme": "vs-dark",
+      "path": "./themes/colors.json"
+    }],
     "languages": [{
       "id": "sal",
       "aliases": ["Nyquist", "sal"],

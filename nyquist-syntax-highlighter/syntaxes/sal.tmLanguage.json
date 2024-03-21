@@ -19,9 +19,14 @@
 		"variables": {
 			"patterns": [
 				{
-					"comment": "Booleans",
-					"name": "variable.other.bool.sal",
-					"match": "#f|#t"
+					"comment": "True",
+					"name": "variable.other.bool.true.sal",
+					"match": "#t"
+				},
+				{
+					"comment": "False",
+					"name": "variable.other.bool.false.sal",
+					"match": "#f"
 				},
 				{
 					"comment": "Nil",
@@ -47,11 +52,11 @@
 				"match": "\\b(public|private|static)\\b"
 			  },
 			  {
-				"name": "entity.name.function",
+				"name": "entity.name.function.sal",
 				"match": "\\b[a-zA-Z_-][a-zA-Z0-9_-]*\\b(?=\\()"
 			  },
 			  {
-				"name": "variable.parameter",
+				"name": "variable.parameter.sal",
 				"match": "\\b([a-zA-Z_-][a-zA-Z0-9_-]*(?=\\:))|((\\:)[a-zA-Z_-][a-zA-Z0-9_-]*)"
 			  },
 			  {
@@ -73,11 +78,11 @@
 			"patterns": [
 				{
 					"name": "keyword.control.sal",
-					"match": "\\b(if|while|for|return|then|set|define function|begin|end|finally|loop)\\b"
+					"match": "\\b(while|for|return|set|display|define|function)\\b"
 				},
 				{
-					"name": "keyword.control.less",
-					"match": "\\b(variable|set|with)\\b"
+					"name": "keyword.control.less.sal",
+					"match": "\\b(variable|set|with|if|else|then|loop|finally|begin|end|loop)\\b"
 				}
 			]
 		},
