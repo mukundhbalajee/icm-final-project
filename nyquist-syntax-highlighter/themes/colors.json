@@ -73,6 +73,12 @@
             "settings": {
                 "foreground": "#5485b6"
             }
+        },
+        {
+            "scope": "keyword.operator.common.sal",
+            "settings": {
+                "foreground": "#a06e3b"
+            }
         }
     ]
 }

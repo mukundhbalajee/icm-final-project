@@ -13,7 +13,8 @@
 				{ "include": "#keywords" }, 
 				{ "include": "#strings" }, 
 				{ "include": "#function" },
-				{ "include": "#variables" }
+				{ "include": "#variables" },
+				{ "include": "#operators" }
 			]
 		  },
 		"variables": {
@@ -94,6 +95,15 @@
 				{
 					"name": "constant.character.escape.sal",
 					"match": "\\\\."
+				}
+			]
+		},
+		"operators": {
+			"name": "keyword.operator.sal",
+			"patterns": [
+				{
+					"name": "keyword.operator.common.sal",
+					"match": "(\\s|^)(<|<=|>|>=|=|\\+|\\-|&|\\||@|@@|~|~~|@=|\\*|\\/)(\\s|$)"
 				}
 			]
 		}
