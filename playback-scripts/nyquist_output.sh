@@ -37,7 +37,6 @@ else
     echo "Named pipe does not exist."
 fi
 
-
 trap - INT TERM EXIT HUP ERR
 
 exit
