@@ -1,0 +1,20 @@
+#!/usr/local/bin/expect -f
+
+# Function to execute a command
+proc run_comm { CMD } { 
+    # Execute the command
+    log_user 0
+    spawn /Applications/NyquistIDE.app/Contents/Java/ny
+    expect -exact "> "
+    send -- "(sal)\r"
+    expect -exact "SAL> "
+    send -- "$CMD\n\r"
+    log_user 1
+    expect -exact "SAL> "
+    log_user 0
+    send -- "(exit)\n\r"
+}
+
+set input [lindex $argv 0];
+
+run_comm "$input"
