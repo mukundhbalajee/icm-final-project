@@ -9,31 +9,128 @@
   "categories": [
     "Other"
   ],
-  "activationEvents": [],
+  "activationEvents": [
+    "onLanguage:sal"
+  ],
   "main": "./out/extension.js",
   "contributes": {
     "commands": [
       {
         "command": "code-symphony.helloWorld",
-        "title": "Hello World VSCode"
-      },
-      {
-        "command": "code-symphony.displayTime",
-        "title": "Display Time"
-      },
-      {
-        "command": "code-symphony.warningMsg",
-        "title": "Warning Message"
+        "title": "Hello World VSCode",
+        "category": "test"
       },
       {
         "command": "code-symphony.launchTerminal",
-        "title": "Launch Terminal"
+        "title": "Launch Terminal",
+        "category": "test"
       },
       {
         "command": "code-symphony.openInBrowser",
-        "title": "Open in Browser"
+        "title": "Open in Browser",
+        "category": "test"
+      },
+      {
+        "command": "code-symphony.createPanel",
+        "title": "Create Panel",
+        "category": "test"
+      },
+      {
+        "command": "code-symphony.createTextable",
+        "title": "Create Textable",
+        "category": "test"
+      },
+      {
+        "command": "code-symphony.runFile",
+        "title": "Run File",
+        "icon": "$(debug-start)"
+      },
+      {
+        "command": "code-symphony.replay",
+        "title": "Replay",
+        "icon": "$(debug-reverse-continue)"
+      },
+      {
+        "command": "code-symphony.interactiveSal",
+        "title": "Interactive Sal"
+      },
+      {
+        "command": "code-symphony.runSelection",
+        "title": "Run Selection",
+        "category": "shortcuts"
+    }
+    ],
+    "languages": [
+      {
+        "id": "sal",
+        "aliases": [
+          "Nyquist",
+          "sal"
+        ],
+        "extensions": [
+          ".sal"
+        ],
+        "configuration": "./language-configuration.json"
       }
-    ]
+    ],
+    "grammars": [
+      {
+        "language": "sal",
+        "scopeName": "source.sal",
+        "path": "./syntaxes/sal.tmLanguage.json"
+      }
+    ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "nyquistContainer",
+          "title": "Nyquist",
+          "icon": "./res/img/nqicon.svg"
+        }
+      ]
+    },
+    "views": {
+      "nyquistContainer": [
+        {
+          "id": "nyquistView",
+          "name": "<Display Name>"
+        }
+      ]
+    },
+    "menus": {
+      "editor/title": [
+        {
+          "when": "resourceLangId == sal",
+          "command": "code-symphony.runFile",
+          "group": "navigation@1"
+        },
+        {
+          "when": "resourceLangId == sal",
+          "command": "code-symphony.replay",
+          "group": "navigation@2"
+        }
+      ],
+      "editor/title/context": [
+        {
+          "command": "code-symphony.runFile"
+        },
+        {
+          "command": "code-symphony.replay"
+        }
+      ],
+      "view/item/context": [{
+        "command": "code-symphony.interactiveSal",
+        "when": "view == nyquistView"
+    }]
+    },
+    "keybindings": [
+      {
+          "command": "code-symphony.runSelection",
+          "key": "ctrl+u",
+          "mac": "cmd+u",
+          "when": "editorTextFocus"
+      }
+  ]
   },
   "scripts": {
     "vscode:prepublish": "npm run compile",
