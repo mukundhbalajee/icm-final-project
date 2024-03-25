@@ -5,96 +5,54 @@ import * as vscode from 'vscode';
 
 // persistent terminal for SAL commands
 let salTerminal: vscode.Terminal | undefined = undefined;
+let salConfig: boolean = false;
 const path = require('path'); // Require the path module
 
 // This method is called when your extension is activated
 // Your extension is activated the very first time the command is executed
 export function activate(context: vscode.ExtensionContext) {
 
-	// Use the console to output diagnostic information (console.log) and errors (console.error)
-	// This line of code will only be executed once when your extension is activated
-	console.log('Congratulations, your extension "code-symphony" is now active!');
-
-	// The command has been defined in the package.json file
-	// Now provide the implementation of the command with registerCommand
-	// The commandId parameter must match the command field in package.json
-	let disposable = vscode.commands.registerCommand('code-symphony.helloWorld', () => {
-		// The code you place here will be executed every time your command is executed
-		// Display a message box to the user
-		vscode.window.showInformationMessage('Hello World VSCode from code-symphony!');
-		vscode.window.showInformationMessage(new Date().toLocaleTimeString());
-		vscode.window.showWarningMessage('This is a warning message!');
-	});
-
-	// launch cat command in terminal
-	let disposable4 = vscode.commands.registerCommand('code-symphony.launchTerminal', () => {
-		const terminal = vscode.window.createTerminal('My Terminal');
-		terminal.show();
-
-		const activeTextEditor = vscode.window.activeTextEditor;
-		if (activeTextEditor) {
-			const fileUri = activeTextEditor.document.uri;
-			// print the file uri
-			console.log(fileUri);
-			console.log(activeTextEditor.document.getText());
-			// store the content of the file
-			const content = activeTextEditor.document.getText();
-			// launch command in terminal
-			terminal.sendText('cat ' + fileUri.fsPath);
-			terminal.sendText('bash ' + fileUri.fsPath);
-		}
-		terminal.sendText('echo "Hello, World!!!!"');
-
-	});
-
-	// load the current file in the browser
-	let disposable5 = vscode.commands.registerCommand('code-symphony.openInBrowser', () => {
-		const activeTextEditor = vscode.window.activeTextEditor;
-		if (activeTextEditor) {
-			const fileUri = activeTextEditor.document.uri;
-			// open the file using the default software for the file type
-			vscode.env.openExternal(fileUri);
-		}
-	});
-
-	// create an icon in the status bar
-	let myStatusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100);
-	myStatusBarItem.text = `$(file-code)`;
-	myStatusBarItem.command = 'code-symphony.helloWorld';
-	myStatusBarItem.show();
-
-	// create a new tab in the lower panel
-	let disposable6 = vscode.commands.registerCommand('code-symphony.createPanel', () => {
-		const panel = vscode.window.createWebviewPanel(
-			'catCoding',
-			'Cat Coding',
-			vscode.ViewColumn.One,
-			{}
-		);
-
-		panel.webview.html = "<h1>Hello, World!</h1>";
-		// panel.webview.html = getWebviewContent();
-	});
-
-	let disposable8 = vscode.commands.registerCommand('code-symphony.createTextable', () => {
-		const panel = vscode.window.createWebviewPanel(
-			'inputTab', // Identifies the type of the webview. Used internally
-			'User Input Tab', // Title of the panel displayed to the user
-			vscode.ViewColumn.One, // Editor column to show the new webview panel in.
-			{
-				// Enable scripts in the webview
-				enableScripts: true
-			}
-		);
-
-		panel.webview.html = getWebviewContent2();
-	});
-
-
 	// ----------------- Commands ----------------- //
-	if (!salTerminal) {
-		salTerminal = vscode.window.createTerminal('SAL Terminal');
-	}
+	configSalTerminal(context.extensionPath);
+
+	vscode.window.onDidChangeActiveTextEditor(editor => {
+        if (editor) {
+            const languageId = editor.document.languageId;
+            console.log(`The user is now editing a file of type: ${languageId}`);
+            // You can perform additional actions based on the file type here
+			
+			if (languageId === 'sal') {
+				configSalTerminal(context.extensionPath);
+			}
+
+        }
+    }, null, context.subscriptions);
+
+	vscode.window.onDidCloseTerminal(closedTerminal => {
+        if (salTerminal === closedTerminal) {
+            salTerminal = undefined; // Reset the terminal
+			salConfig = false;
+        }
+    });
+
+	let openTextDocumentListener = vscode.workspace.onDidOpenTextDocument(document => {
+        // Check the file type using the languageId or the file extension
+        if (document.languageId === 'sal') {
+            // Perform an action if a JavaScript file is opened
+			configSalTerminal(context.extensionPath);
+        }
+    });
+
+	let createFilesListener = vscode.workspace.onDidCreateFiles(event => {
+        event.files.forEach(uri => {
+            // Here you can check the file extension or other properties
+            if (uri.path.endsWith('.sal')) {
+                // Perform an action if the created file is a JavaScript file
+				vscode.window.showInformationMessage('SAL file created');
+				configSalTerminal(context.extensionPath);
+            }
+        });
+    });
 
 	let runFile = vscode.commands.registerCommand('code-symphony.runFile', () => {
 		const activeTextEditor = vscode.window.activeTextEditor;
@@ -174,7 +132,6 @@ export function activate(context: vscode.ExtensionContext) {
 		const onDiskPath = vscode.Uri.file(
 			path.join(context.extensionPath, 'res', 'audio', 'p5cross2.mp3')
 		);
-		vscode.window.showInformationMessage(onDiskPath.toString());
 
 		// And get the special URI to use with the webview
 		const audioSrc = panel.webview.asWebviewUri(onDiskPath);
@@ -187,8 +144,6 @@ export function activate(context: vscode.ExtensionContext) {
 		} else {
 			type = "audio/mp3";
 		}
-		vscode.window.showInformationMessage(audioSrc.toString());
-		vscode.window.showInformationMessage(type);
 
 		panel.webview.html = `
 			<!DOCTYPE html>
@@ -208,6 +163,96 @@ export function activate(context: vscode.ExtensionContext) {
 
 	});
 
+	context.subscriptions.push(runFile);
+	context.subscriptions.push(interactiveSal);
+	context.subscriptions.push(runSelection);
+	context.subscriptions.push(replay);
+	context.subscriptions.push(openTextDocumentListener);
+	context.subscriptions.push(createFilesListener);
+
+
+	// ----------------- Reference Code ----------------- //
+	
+	// Use the console to output diagnostic information (console.log) and errors (console.error)
+	// This line of code will only be executed once when your extension is activated
+	console.log('Congratulations, your extension "code-symphony" is now active!');
+
+	// The command has been defined in the package.json file
+	// Now provide the implementation of the command with registerCommand
+	// The commandId parameter must match the command field in package.json
+	let disposable = vscode.commands.registerCommand('code-symphony.helloWorld', () => {
+		// The code you place here will be executed every time your command is executed
+		// Display a message box to the user
+		vscode.window.showInformationMessage('Hello World VSCode from code-symphony!');
+		vscode.window.showInformationMessage(new Date().toLocaleTimeString());
+		vscode.window.showWarningMessage('This is a warning message!');
+	});
+
+	// launch cat command in terminal
+	let disposable4 = vscode.commands.registerCommand('code-symphony.launchTerminal', () => {
+		const terminal = vscode.window.createTerminal('My Terminal');
+		terminal.show();
+
+		const activeTextEditor = vscode.window.activeTextEditor;
+		if (activeTextEditor) {
+			const fileUri = activeTextEditor.document.uri;
+			// print the file uri
+			console.log(fileUri);
+			console.log(activeTextEditor.document.getText());
+			// store the content of the file
+			const content = activeTextEditor.document.getText();
+			// launch command in terminal
+			terminal.sendText('cat ' + fileUri.fsPath);
+			terminal.sendText('bash ' + fileUri.fsPath);
+		}
+		terminal.sendText('echo "Hello, World!!!!"');
+
+	});
+
+	// load the current file in the browser
+	let disposable5 = vscode.commands.registerCommand('code-symphony.openInBrowser', () => {
+		const activeTextEditor = vscode.window.activeTextEditor;
+		if (activeTextEditor) {
+			const fileUri = activeTextEditor.document.uri;
+			// open the file using the default software for the file type
+			vscode.env.openExternal(fileUri);
+		}
+	});
+
+	// create an icon in the status bar
+	let myStatusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100);
+	myStatusBarItem.text = `$(file-code)`;
+	myStatusBarItem.command = 'code-symphony.helloWorld';
+	myStatusBarItem.show();
+
+	// create a new tab in the lower panel
+	let disposable6 = vscode.commands.registerCommand('code-symphony.createPanel', () => {
+		const panel = vscode.window.createWebviewPanel(
+			'catCoding',
+			'Cat Coding',
+			vscode.ViewColumn.One,
+			{}
+		);
+
+		panel.webview.html = "<h1>Hello, World!</h1>";
+		// panel.webview.html = getWebviewContent();
+	});
+
+	let disposable8 = vscode.commands.registerCommand('code-symphony.createTextable', () => {
+		const panel = vscode.window.createWebviewPanel(
+			'inputTab', // Identifies the type of the webview. Used internally
+			'User Input Tab', // Title of the panel displayed to the user
+			vscode.ViewColumn.One, // Editor column to show the new webview panel in.
+			{
+				// Enable scripts in the webview
+				enableScripts: true
+			}
+		);
+
+		panel.webview.html = getWebviewContent2();
+	});
+	
+
 	context.subscriptions.push(disposable);
 	context.subscriptions.push(disposable4);
 	context.subscriptions.push(disposable5);
@@ -215,10 +260,6 @@ export function activate(context: vscode.ExtensionContext) {
 	context.subscriptions.push(disposable8);
 	context.subscriptions.push(myStatusBarItem);
 
-	context.subscriptions.push(runFile);
-	context.subscriptions.push(interactiveSal);
-	context.subscriptions.push(runSelection);
-	context.subscriptions.push(replay);
 }
 
 // This method is called when your extension is deactivated
@@ -304,4 +345,15 @@ function getWorkspaceDirectory() {
 		// Handle cases where no workspace is open and no file is active
 		return null;
 	}
+}
+
+function configSalTerminal(extensionPath: string) {
+	if (!salTerminal) {
+		salTerminal = vscode.window.createTerminal('SAL Terminal');
+	}
+	if (!salConfig) {
+		salTerminal.sendText('bash ' + extensionPath + '/bash/create_session.sh');
+		salConfig = true;
+	}
+	salTerminal.show();
 }
