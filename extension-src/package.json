@@ -58,7 +58,14 @@
         "command": "code-symphony.runSelection",
         "title": "Run Selection",
         "category": "shortcuts"
-    }
+      }
+    ],
+    "themes": [
+      {
+        "label": "Main color theme",
+        "uiTheme": "vs-dark",
+        "path": "./themes/colors.json"
+      }
     ],
     "languages": [
       {
@@ -118,19 +125,21 @@
           "command": "code-symphony.replay"
         }
       ],
-      "view/item/context": [{
-        "command": "code-symphony.interactiveSal",
-        "when": "view == nyquistView"
-    }]
+      "view/item/context": [
+        {
+          "command": "code-symphony.interactiveSal",
+          "when": "view == nyquistView"
+        }
+      ]
     },
     "keybindings": [
       {
-          "command": "code-symphony.runSelection",
-          "key": "ctrl+u",
-          "mac": "cmd+u",
-          "when": "editorTextFocus"
+        "command": "code-symphony.runSelection",
+        "key": "ctrl+u",
+        "mac": "cmd+u",
+        "when": "editorTextFocus"
       }
-  ]
+    ]
   },
   "scripts": {
     "vscode:prepublish": "npm run compile",
