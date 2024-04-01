@@ -352,7 +352,7 @@ function configSalTerminal(extensionPath: string) {
 		salTerminal = vscode.window.createTerminal('SAL Terminal');
 	}
 	if (!salConfig) {
-		salTerminal.sendText('bash ' + extensionPath + '/bash/create_session.sh');
+		salTerminal.sendText('bash ./playback-scripts/create_session.sh');
 		salConfig = true;
 	}
 	salTerminal.show();

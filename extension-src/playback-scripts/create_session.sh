@@ -10,7 +10,7 @@ window_2="Output"
 pkill -9 -f "control_editor.sh"
 pkill -9 -f "nyquist_output.sh"
 pkill -9 -f "process_nyquist_input.sh"
-
+echo $PWD
 # Create a named pipe if it doesn't exist
 PIPE_FILE=/tmp/control_editor_pipe
 if [[ ! -p "$PIPE_FILE" ]]; 
