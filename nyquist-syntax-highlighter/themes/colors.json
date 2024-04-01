@@ -44,10 +44,19 @@
         {
             "scope": [
                 "variable.other.chords.sal",
-                "constant.numeric.sal"
+                "constant.numeric.sal",
+                "variable.global.sal"
             ],
             "settings": {
                 "foreground": "#b45a3c"
+            }
+        },
+        {
+            "scope": [
+                "variable.global.sal"
+            ],
+            "settings": {
+                "foreground": "#4b8b8b"
             }
         },
         {

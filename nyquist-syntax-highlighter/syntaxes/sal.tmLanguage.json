@@ -43,6 +43,11 @@
 					"comment": "Numbers",
 					"name": "constant.numeric.sal",
 					"match": "\\b[0-9]+(\\.[0-9]+)?\\b|\\b\\.[0-9]+\\b"
+				},
+				{
+					"comment": "Global",
+					"name": "variable.global.sal",
+					"match": "\\*+[a-zA-Z_-][a-zA-Z0-9_-]*+\\*"
 				}
 			]
 		},
@@ -79,7 +84,7 @@
 			"patterns": [
 				{
 					"name": "keyword.control.sal",
-					"match": "\\b(while|for|return|set|display|define|function)\\b"
+					"match": "\\b(while|for|return|set|display|define|function|play|plot)\\b"
 				},
 				{
 					"name": "keyword.control.less.sal",
