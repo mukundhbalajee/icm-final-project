@@ -27,6 +27,44 @@ cleanup() {
     exit
 }
 
+# Check if tmux is installed
+# python3 ./install_package.py
+if ! command -v tmux &> /dev/null
+then
+    echo "tmux could not be found"
+    # Attempt to install tmux
+    if [[ "$OSTYPE" == "linux-gnu"* ]]; then
+        # Linux
+        echo "On Linux, you can typically install tmux using your distribution's package manager, e.g., 'sudo apt install tmux' or 'sudo yum install tmux'."
+        cmd="apt-get install -y tmux"
+    elif [[ "$OSTYPE" == "darwin"* ]]; then
+        # Mac OSX
+        echo "On macOS, you can install tmux using Homebrew: 'brew install tmux'."
+        cmd="brew install tmux"
+    
+    fi
+    
+    read -p "Do you want to continue by installing tmux?" -r input 
+    input=$(echo "$input" | tr '[:upper:]' '[:lower:]')
+    case $input in
+      y|yes)
+          # If user agrees, install tmux
+          if [[ "$OSTYPE" == "linux-gnu"* ]]; then
+              sudo apt-get install -y tmux
+          elif [[ "$OSTYPE" == "darwin"* ]]; then
+              brew install tmux
+          else
+              echo "Please install tmux manually before running script."
+              exit 1
+          fi
+          ;;
+      *)
+          echo "Please install tmux manually before running script."
+          exit 1
+          ;;
+  esac
+fi
+
 # Set trap to call cleanup function when SIGINT (Ctrl+C), SIGTERM or EXIT signal is received
 trap 'cleanup' EXIT INT TERM HUP ERR
 
@@ -55,10 +93,10 @@ echo "Renaming Panes..."
 tmux select-pane -t "$session_name:$programming_env.0" -T "$window_1"
 tmux select-pane -t "$session_name:$programming_env.1" -T "$window_2"
 
-tmux send-keys -t "$session_name:$programming_env.0" './control_editor.sh' Enter &
+tmux send-keys -t "$session_name:$programming_env.0" './playback-scripts/control_editor.sh' Enter &
 pid1=$!
 
-tmux send-keys -t "$session_name:$programming_env.1" './nyquist_output.sh' Enter &
+tmux send-keys -t "$session_name:$programming_env.1" './playback-scripts/nyquist_output.sh' Enter &
 pid2=$!
 
 tmux attach-session -t "$session_name"
