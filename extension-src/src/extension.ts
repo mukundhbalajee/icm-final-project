@@ -2,6 +2,7 @@
 // Import the module and reference it with the alias vscode in your code below
 import { on } from 'events';
 import * as vscode from 'vscode';
+import * as fs from 'fs';
 
 // persistent terminal for SAL commands
 let salTerminal: vscode.Terminal | undefined = undefined;
@@ -100,18 +101,27 @@ export function activate(context: vscode.ExtensionContext) {
 	let runSelection = vscode.commands.registerCommand('code-symphony.runSelection', () => {
 		const activeTextEditor = vscode.window.activeTextEditor;
 		if (activeTextEditor) {
-			const selection = activeTextEditor.selection;
-			const selectedText = activeTextEditor.document.getText(selection);
-			console.log(selectedText);
-			vscode.window.showInformationMessage(selectedText);
-
-			// send the selected text to the terminal
-			if (!salTerminal) {
-				configSalTerminal(context.extensionPath);
-			}
-			if (salTerminal) {
-				salTerminal.show();
-				salTerminal.sendText(selectedText);
+			// Check if the active file is a SAL file
+			if (activeTextEditor.document.languageId === 'sal') {
+				const selection = activeTextEditor.selection;
+				const selectedText = activeTextEditor.document.getText(selection);
+				console.log(selectedText);
+				vscode.window.showInformationMessage(selectedText);
+				// Send the selected text to the terminal
+				const pipePath = '/tmp/control_editor_pipe';
+				fs.access(pipePath, fs.constants.F_OK, (err) => {
+					if (!err) {
+						fs.appendFile(pipePath, selectedText + '\n', (err) => {
+							if (err) {
+								vscode.window.showErrorMessage('Failed to write to pipe');
+							}
+						});
+					} else {
+						vscode.window.showErrorMessage('Pipe does not exist');
+					}
+				});
+			} else {
+				vscode.window.showErrorMessage('Please select text in a SAL file');
 			}
 		}
 	});
@@ -246,8 +256,8 @@ function configSalTerminal(extensionPath: string) {
 		// vscode.window.showInformationMessage(`Script directory: ${scriptDirectory}`);
 
 		salTerminal.sendText(`cd  "${scriptDirectory}"`);
-		salTerminal.sendText('clear');
-		salTerminal.sendText('bash ./playback-scripts/create_session.sh  > /dev/null');
+		// salTerminal.sendText('clear');
+		salTerminal.sendText('bash ./playback-scripts/create_session.sh');
 		salConfig = true;
 	}
 	salTerminal.show();

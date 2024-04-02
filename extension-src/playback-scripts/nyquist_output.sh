@@ -11,7 +11,7 @@ cleanup() {
 }
 
 # Set trap to call cleanup function when SIGINT (Ctrl+C), SIGTERM or EXIT signal is received
-trap 'cleanup' EXIT INT TERM HUP ERR
+trap 'cleanup' EXIT INT TERM ERR
 
 # Read input from the named pipe
 if [[ -p "$PIPE_FILE" ]]; then
@@ -37,6 +37,6 @@ else
     echo "Named pipe does not exist."
 fi
 
-trap - INT TERM EXIT HUP ERR
+trap - EXIT INT TERM ERR
 
 exit

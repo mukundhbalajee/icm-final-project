@@ -13,7 +13,7 @@ cleanup() {
 }
 
 # Set trap to call cleanup function when SIGINT (Ctrl+C), SIGTERM or EXIT signal is received
-trap 'cleanup' EXIT INT TERM HUP ERR
+trap 'cleanup' EXIT INT TERM ERR
 
 while pgrep -f "nyquist_output.sh" >/dev/null 2>&1; do
     # If the pipe file exists, write to it, otherwise do nothing
@@ -34,7 +34,7 @@ while pgrep -f "nyquist_output.sh" >/dev/null 2>&1; do
 done
 
 
-trap - INT TERM EXIT HUP ERR
+trap - EXIT INT TERM ERR
 
 tmux kill-session
 
