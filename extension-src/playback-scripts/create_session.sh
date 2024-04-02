@@ -87,6 +87,11 @@ tmux set -g @plugin 'nhdaly/tmux-better-mouse-mode'
 tmux set -g @scroll-down-exit-copy-mode "on"
 tmux set -g @scroll-without-changing-pane "on"
 tmux set -g @scroll-in-moused-over-pane "on"
+
+# if ~/.tmux/plugins/tpm/ doesn't exist, install it
+if [ ! -d ~/.tmux/plugins/tpm ]; then
+    git clone https://github.com/tmux-plugins/tpm ~/.tmux/plugins/tpm
+fi
 bash ~/.tmux/plugins/tpm/tpm
 
 echo "Renaming Panes..."
