@@ -4,7 +4,7 @@
 file=""
 command=""
 export XLISPPATH=/Users/mukundhbalajee1/Desktop/Personal/nyquist/runtime:/Users/mukundhbalajee1/Desktop/Personal/nyquist/lib
-
+dir_path="$(realpath "$(dirname "$0")")"
 
 # Function to display help message
 show_help() {
@@ -54,8 +54,7 @@ if $fileFlag; then
     fi
 
 elif $commandFlag; then
-    ./process_command_file.exp "$input"
-    echo "exit"
+    expect "$dir_path/process_command_file.exp" "$input"
     
 else
     show_help

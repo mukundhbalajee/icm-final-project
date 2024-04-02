@@ -5,6 +5,11 @@ session_name="NyquistIDE"
 programming_env="Nyquist"
 window_1="Editor"
 window_2="Output"
+dir_path="$(realpath "$(dirname "$0")")"
+run_editor_command="$dir_path/control_editor.sh"
+run_output_command="$dir_path/nyquist_output.sh"
+
+echo "$run_editor_command"
 
 # Kill all exisiting processes associated with necessary scripts
 pkill -9 -f "control_editor.sh"
@@ -76,6 +81,7 @@ fi
 lines="$(tput lines)"
 columns="$(tput cols)"
 
+
 echo "Creating Editor..."
 tmux new -d -x "$lines" -y "$columns" -s "$session_name" -n "$programming_env" 'bash'
 
@@ -98,11 +104,11 @@ bash ~/.tmux/plugins/tpm/tpm
 echo "Renaming Panes..."
 tmux select-pane -t "$session_name:$programming_env.0" -T "$window_1"
 tmux select-pane -t "$session_name:$programming_env.1" -T "$window_2"
-echo $PWD
-tmux send-keys -t "$session_name:$programming_env.0" './control_editor.sh' Enter &
+
+tmux send-keys -t "$session_name:$programming_env.0" bash " '$run_editor_command'" Enter &
 pid1=$!
 
-tmux send-keys -t "$session_name:$programming_env.1" './nyquist_output.sh' Enter &
+tmux send-keys -t "$session_name:$programming_env.1" bash " '$run_output_command'" Enter &
 pid2=$!
 
 tmux attach-session -t "$session_name"

@@ -59,18 +59,41 @@ export function activate(context: vscode.ExtensionContext) {
 	let runFile = vscode.commands.registerCommand('code-symphony.runFile', () => {
 		const activeTextEditor = vscode.window.activeTextEditor;
 		if (activeTextEditor) {
-			const fileUri = activeTextEditor.document.uri;
+			// Check if the active file is a SAL file
+			if (activeTextEditor.document.languageId === 'sal') {
+				const fileUri = activeTextEditor.document.uri;
 
-			console.log(fileUri);
-			console.log(activeTextEditor.document.getText());
+				// console.log(fileUri);
+				// console.log(activeTextEditor.document.getText());
 
-			const content = activeTextEditor.document.getText();
-			if (!salTerminal) {
-				configSalTerminal(context.extensionPath);
-			}
-			if (salTerminal) {
-				salTerminal.show();
-				salTerminal.sendText(content);
+				const content = `load "${fileUri.fsPath}"`;
+
+				const pipePath = '/tmp/control_editor_pipe';
+				fs.open(pipePath, 'a', (err, fd) => {
+					if (!err) {
+						fs.write(fd, content + '\n', (err) => {
+							if (err) {
+								vscode.window.showErrorMessage('Failed to write to pipe');
+							}
+						});
+						fs.close(fd, (err) => {
+                            if (err) {
+                                vscode.window.showErrorMessage('Failed to close pipe');
+                            }
+                        });
+					} else {
+						vscode.window.showErrorMessage('Failed to open pipe');
+					}
+				});
+				if (!salTerminal) {
+					configSalTerminal(context.extensionPath);
+				}
+				if (salTerminal) {
+					salTerminal.show();
+					salTerminal.sendText(content);
+				}
+			}  else {
+				vscode.window.showErrorMessage('Please select text in a SAL file');
 			}
 		}
 	});
@@ -254,15 +277,15 @@ function configSalTerminal(extensionPath: string) {
 		salTerminal = vscode.window.createTerminal('SAL Terminal');
 	}
 	if (!salConfig) {
-		// let workspaceFolder = vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders[0] && vscode.workspace.workspaceFolders[0].uri.fsPath;
+		let workspaceFolder = vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders[0] && vscode.workspace.workspaceFolders[0].uri.fsPath;
 
 		// Change to the current directory directory
 		let scriptDirectory = path.dirname(__dirname);
 		// vscode.window.showInformationMessage(`Script directory: ${scriptDirectory}`);
 
-		salTerminal.sendText(`cd  "${scriptDirectory}/playback-scripts"`);
-		salTerminal.sendText('clear');
-		salTerminal.sendText('bash ./create_session.sh');
+		salTerminal.sendText(`cd  "${workspaceFolder}"`);
+		salTerminal.sendText(`clear`);
+		salTerminal.sendText(`bash "${scriptDirectory}/playback-scripts/create_session.sh"`);
 		salConfig = true;
 	}
 	salTerminal.show();

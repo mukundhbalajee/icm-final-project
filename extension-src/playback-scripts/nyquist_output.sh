@@ -5,6 +5,7 @@ clear
 PIPE_FILE=/tmp/control_editor_pipe
 
 echo "Starting nyquist_output.sh..."
+dir_path="$(realpath "$(dirname "$0")")"
 
 # Define cleanup procedure
 cleanup() {
@@ -32,7 +33,7 @@ if [[ -p "$PIPE_FILE" ]]; then
             fi
 
             # Execute the command with process_nyquist_input.sh
-            ./process_nyquist_input.sh -c "$input"
+            bash "$dir_path/process_nyquist_input.sh" -c "$input"
         fi
     done
 else
