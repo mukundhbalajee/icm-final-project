@@ -44,7 +44,7 @@ then
     
     fi
     
-    read -p "Do you want to continue by installing tmux?" -r input 
+    read -p "Do you want to continue by installing tmux? (yes/y/no/n) " -r input 
     input=$(echo "$input" | tr '[:upper:]' '[:lower:]')
     case $input in
       y|yes)
@@ -74,11 +74,6 @@ fi
 
 lines="$(tput lines)"
 columns="$(tput cols)"
-
-
-
-tmux set -g update-environment -r # match shell environment variables
-tmux set-option -g default-command "exec /bin/bash -l"
 
 echo "Creating Editor..."
 tmux new -d -x "$lines" -y "$columns" -s "$session_name" -n "$programming_env" 'bash'
