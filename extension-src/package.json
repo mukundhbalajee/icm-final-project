@@ -58,6 +58,10 @@
         "command": "code-symphony.runSelection",
         "title": "Run Selection",
         "category": "shortcuts"
+      },
+      {
+        "command": "code-symphony.replay2",
+        "title": "Replay2"
       }
     ],
     "themes": [
@@ -137,6 +141,12 @@
         "command": "code-symphony.runSelection",
         "key": "ctrl+u",
         "mac": "cmd+u",
+        "when": "editorTextFocus"
+      },
+      {
+        "command": "code-symphony.runFile",
+        "key": "ctrl+k",
+        "mac": "cmd+k",
         "when": "editorTextFocus"
       }
     ]
