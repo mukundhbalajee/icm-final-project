@@ -352,7 +352,13 @@ function configSalTerminal(extensionPath: string) {
 		salTerminal = vscode.window.createTerminal('SAL Terminal');
 	}
 	if (!salConfig) {
-		salTerminal.sendText('bash ./playback-scripts/create_session.sh');
+		let workspaceFolder = vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders[0] && vscode.workspace.workspaceFolders[0].uri.fsPath;
+		
+		// Change to the current directory directory
+		let scriptDirectory = `${workspaceFolder}`;
+
+		salTerminal.sendText('cd ' + scriptDirectory);
+		salTerminal.sendText('bash ../playback-scripts/create_session.sh');
 		salConfig = true;
 	}
 	salTerminal.show();

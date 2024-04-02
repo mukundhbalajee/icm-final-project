@@ -75,6 +75,11 @@ fi
 lines="$(tput lines)"
 columns="$(tput cols)"
 
+
+
+tmux set -g update-environment -r # match shell environment variables
+tmux set-option -g default-command "exec /bin/bash -l"
+
 echo "Creating Editor..."
 tmux new -d -x "$lines" -y "$columns" -s "$session_name" -n "$programming_env" 'bash'
 
