@@ -6,14 +6,17 @@ PIPE_FILE=/tmp/control_editor_pipe
 
 # Define cleanup procedure
 cleanup() {
+    echo "Cleaning up control_editor.sh..."
     echo "exit" > "$PIPE_FILE"
     pkill -9 -f "nyquist_output.sh"
     tmux kill-session
     exit
 }
 
+echo "Starting control_editor.sh..."
+
 # Set trap to call cleanup function when SIGINT (Ctrl+C), SIGTERM or EXIT signal is received
-trap 'cleanup' EXIT INT TERM HUP ERR
+trap 'cleanup' EXIT INT TERM HUP 
 
 while pgrep -f "nyquist_output.sh" >/dev/null 2>&1; do
     # If the pipe file exists, write to it, otherwise do nothing
@@ -34,8 +37,10 @@ while pgrep -f "nyquist_output.sh" >/dev/null 2>&1; do
 done
 
 
-trap - EXIT INT TERM HUP ERR
+trap - EXIT INT TERM HUP
 
 tmux kill-session
+
+echo "Exiting control_editor.sh..."
 
 exit

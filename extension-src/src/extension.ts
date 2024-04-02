@@ -109,15 +109,15 @@ export function activate(context: vscode.ExtensionContext) {
 				vscode.window.showInformationMessage(selectedText);
 				// Send the selected text to the terminal
 				const pipePath = '/tmp/control_editor_pipe';
-				fs.access(pipePath, fs.constants.F_OK, (err) => {
+				fs.open(pipePath, 'a', (err, fd) => {
 					if (!err) {
-						fs.appendFile(pipePath, selectedText + '\n', (err) => {
+						fs.write(fd, selectedText + '\n', (err) => {
 							if (err) {
 								vscode.window.showErrorMessage('Failed to write to pipe');
 							}
 						});
 					} else {
-						vscode.window.showErrorMessage('Pipe does not exist');
+						vscode.window.showErrorMessage('Failed to open pipe');
 					}
 				});
 			} else {
@@ -192,7 +192,7 @@ export function activate(context: vscode.ExtensionContext) {
 	let replay2 = vscode.commands.registerCommand('code-symphony.replay2', function () {
 		// Get the extension
 		const extension = vscode.extensions.getExtension(extensionId);
-		console.log("???")
+		// console.log"???");
 
 		if (extension) {
 			if (!extension.isActive) {
@@ -255,9 +255,9 @@ function configSalTerminal(extensionPath: string) {
 		let scriptDirectory = path.dirname(__dirname);
 		// vscode.window.showInformationMessage(`Script directory: ${scriptDirectory}`);
 
-		salTerminal.sendText(`cd  "${scriptDirectory}"`);
+		salTerminal.sendText(`cd  "${scriptDirectory}/playback-scripts"`);
 		salTerminal.sendText('clear');
-		salTerminal.sendText('bash ./playback-scripts/create_session.sh');
+		salTerminal.sendText('bash ./create_session.sh');
 		salConfig = true;
 	}
 	salTerminal.show();

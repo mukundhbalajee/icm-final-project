@@ -22,6 +22,7 @@ fi
 # Define cleanup procedure
 cleanup() {
     # echo "Script interrupted. Cleaning up..."
+    echo "Cleaning up create_session.sh..."
     rm -f "$PIPE_FILE" # Remove the named pipe
     tmux kill-session -a -t $session_name
     exit
@@ -66,7 +67,7 @@ then
 fi
 
 # Set trap to call cleanup function when SIGINT (Ctrl+C), SIGTERM or EXIT signal is received
-trap 'cleanup' EXIT INT TERM HUP ERR
+trap 'cleanup' EXIT INT TERM HUP
 
 if tmux has-session -t "$session_name" 2>/dev/null; then
   tmux kill-session -t "$session_name"
@@ -97,11 +98,11 @@ bash ~/.tmux/plugins/tpm/tpm
 echo "Renaming Panes..."
 tmux select-pane -t "$session_name:$programming_env.0" -T "$window_1"
 tmux select-pane -t "$session_name:$programming_env.1" -T "$window_2"
-
-tmux send-keys -t "$session_name:$programming_env.0" './playback-scripts/control_editor.sh' Enter &
+echo $PWD
+tmux send-keys -t "$session_name:$programming_env.0" './control_editor.sh' Enter &
 pid1=$!
 
-tmux send-keys -t "$session_name:$programming_env.1" './playback-scripts/nyquist_output.sh' Enter &
+tmux send-keys -t "$session_name:$programming_env.1" './nyquist_output.sh' Enter &
 pid2=$!
 
 tmux attach-session -t "$session_name"
@@ -110,6 +111,8 @@ wait $pid1 $pid2
 
 rm -f "$PIPE_FILE" # Remove the named pipe
 
-trap - INT TERM EXIT HUP ERR
+trap - INT TERM EXIT HUP
 
 tmux kill-session -a -t $session_name 2>/dev/null
+
+echo "Exiting create_session.sh..."
