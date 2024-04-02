@@ -11,32 +11,35 @@ cleanup() {
 }
 
 # Set trap to call cleanup function when SIGINT (Ctrl+C), SIGTERM or EXIT signal is received
-trap 'cleanup' EXIT INT TERM ERR
+trap 'cleanup' EXIT INT TERM HUP ERR
 
-# Read input from the named pipe
-if [[ -p "$PIPE_FILE" ]]; then
-    # Continuously display the contents of the log file
-    while [[ -p "$PIPE_FILE" ]]; do
+while true;
+    # Read input from the named pipe
+    if [[ -p "$PIPE_FILE" ]]; then
+        # Continuously display the contents of the log file
+        while [[ -p "$PIPE_FILE" ]]; do
 
-        echo -n "SAL> "
+            echo -n "SAL> "
 
-        if read -t 1 -r input < "$PIPE_FILE"; then
-            # Print the input
-            echo "$input"
-            
-            if [[ "$input" == "exit" ]]; then
-                break
+            if read -t 1 -r input < "$PIPE_FILE"; then
+                # Print the input
+                echo "$input"
+                
+                if [[ "$input" == "exit" ]]; then
+                    break
+                fi
+
+                # Execute the command with process_nyquist_input.sh
+                ./process_nyquist_input.sh -c "$input"
             fi
+        
+        done
+    else
+        echo "Named pipe does not exist."
+        exit 1
+    fi
+done
 
-            # Execute the command with process_nyquist_input.sh
-            ./process_nyquist_input.sh -c "$input"
-        fi
-    
-    done
-else
-    echo "Named pipe does not exist."
-fi
-
-trap - EXIT INT TERM ERR
+trap - EXIT INT TERM HUP ERR
 
 exit

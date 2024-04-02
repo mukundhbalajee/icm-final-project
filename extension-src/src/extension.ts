@@ -256,7 +256,7 @@ function configSalTerminal(extensionPath: string) {
 		// vscode.window.showInformationMessage(`Script directory: ${scriptDirectory}`);
 
 		salTerminal.sendText(`cd  "${scriptDirectory}"`);
-		// salTerminal.sendText('clear');
+		salTerminal.sendText('clear');
 		salTerminal.sendText('bash ./playback-scripts/create_session.sh');
 		salConfig = true;
 	}
