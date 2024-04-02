@@ -116,6 +116,11 @@ export function activate(context: vscode.ExtensionContext) {
 								vscode.window.showErrorMessage('Failed to write to pipe');
 							}
 						});
+						fs.close(fd, (err) => {
+                            if (err) {
+                                vscode.window.showErrorMessage('Failed to close pipe');
+                            }
+                        });
 					} else {
 						vscode.window.showErrorMessage('Failed to open pipe');
 					}
