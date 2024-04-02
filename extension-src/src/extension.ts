@@ -61,14 +61,14 @@ export function activate(context: vscode.ExtensionContext) {
 		if (activeTextEditor) {
 			// Check if the active file is a SAL file
 			if (activeTextEditor.document.languageId === 'sal') {
+				if (!salTerminal) {
+					configSalTerminal(context.extensionPath);
+				}
+
 				const fileUri = activeTextEditor.document.uri;
-
-				// console.log(fileUri);
-				// console.log(activeTextEditor.document.getText());
-
 				const content = `load "${fileUri.fsPath}"`;
-
 				const pipePath = '/tmp/control_editor_pipe';
+				
 				fs.open(pipePath, 'a', (err, fd) => {
 					if (!err) {
 						fs.write(fd, content + '\n', (err) => {
@@ -85,13 +85,6 @@ export function activate(context: vscode.ExtensionContext) {
 						vscode.window.showErrorMessage('Failed to open pipe');
 					}
 				});
-				if (!salTerminal) {
-					configSalTerminal(context.extensionPath);
-				}
-				if (salTerminal) {
-					salTerminal.show();
-					salTerminal.sendText(content);
-				}
 			}  else {
 				vscode.window.showErrorMessage('Please select text in a SAL file');
 			}
