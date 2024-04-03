@@ -81,7 +81,11 @@
         "extensions": [
           ".sal"
         ],
-        "configuration": "./language-configuration.json"
+        "configuration": "./language-configuration.json",
+        "icon": {
+          "light": "./res/img/tabIcon.svg",
+          "dark": "./res/img/tabIcon.svg"
+        }
       }
     ],
     "grammars": [
