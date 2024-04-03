@@ -7,8 +7,11 @@ import * as fs from 'fs';
 // persistent terminal for SAL commands
 let salTerminal: vscode.Terminal | undefined = undefined;
 let salConfig: boolean = false;
+let playBackFile: string = '';
 const path = require('path'); // Require the path module
+const os = require('os');
 const extensionId = 'sukumo28.wav-preview';
+
 
 // This method is called when your extension is activated
 // Your extension is activated the very first time the command is executed
@@ -42,6 +45,9 @@ export function activate(context: vscode.ExtensionContext) {
 		if (document.languageId === 'sal') {
 			// Perform an action if a JavaScript file is opened
 			configSalTerminal(context.extensionPath);
+
+			// copy the temp.wav file to the workspace
+			copyWavFile();
 		}
 	});
 
@@ -77,15 +83,17 @@ export function activate(context: vscode.ExtensionContext) {
 							}
 						});
 						fs.close(fd, (err) => {
-                            if (err) {
-                                vscode.window.showErrorMessage('Failed to close pipe');
-                            }
-                        });
+							if (err) {
+								vscode.window.showErrorMessage('Failed to close pipe');
+							}
+						});
 					} else {
 						vscode.window.showErrorMessage('Failed to open pipe');
 					}
 				});
-			}  else {
+
+				copyWavFile();
+			} else {
 				vscode.window.showErrorMessage('Please select text in a SAL file');
 			}
 		}
@@ -133,20 +141,21 @@ export function activate(context: vscode.ExtensionContext) {
 							}
 						});
 						fs.close(fd, (err) => {
-                            if (err) {
-                                vscode.window.showErrorMessage('Failed to close pipe');
-                            }
-                        });
+							if (err) {
+								vscode.window.showErrorMessage('Failed to close pipe');
+							}
+						});
 					} else {
 						vscode.window.showErrorMessage('Failed to open pipe');
 					}
 				});
+
+				copyWavFile();
 			} else {
 				vscode.window.showErrorMessage('Please select text in a SAL file');
 			}
 		}
 	});
-
 
 
 	// code-symphony.replay
@@ -282,4 +291,51 @@ function configSalTerminal(extensionPath: string) {
 		salConfig = true;
 	}
 	salTerminal.show();
+}
+
+function copyWavFile() {
+	return;
+	const username = getCurrentUsername().toLowerCase();
+	const tempWavPath = `/tmp/${username}-temp.wav`;
+	const workspaceDir = getWorkspaceDirectory();
+
+	// iteratively find the current index for the temp_num.wav file
+	let index = 0;
+	let destinationPath = '';
+	while (true) {
+		destinationPath = `${workspaceDir}/temp_${index}.wav`;
+		try {
+			fs.accessSync(destinationPath, fs.constants.F_OK);
+			index++;
+		}
+		catch (err) {
+			break;
+		}
+	}
+
+	if (!workspaceDir) {
+		return;
+	}
+
+	fs.access(tempWavPath, fs.constants.F_OK, (err) => {
+		if (!err) {
+			// File exists
+			fs.copyFile(tempWavPath, destinationPath, (err) => {
+				if (err) {
+					console.error('Error copying file:', err);
+					return;
+				}
+				console.log('File copied successfully.');
+			});
+
+			playBackFile = destinationPath;
+		} else {
+			// File does not exist
+			console.log('temp.wav does not exist');
+		}
+	});
+}
+
+function getCurrentUsername() {
+	return os.userInfo().username;
 }
