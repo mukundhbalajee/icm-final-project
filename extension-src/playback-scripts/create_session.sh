@@ -1,43 +1,96 @@
 #!/bin/bash
 
-# Check if realpath is installed
-if ! command -v realpath &> /dev/null
-then
-    echo "realpath could not be found"
-    # Attempt to install realpath
+# Script Name: create_session.sh
+# Description: This script creates a new tmux session with an editor and an output terminal for the NyquistIDE.
+# It sets up the necessary environment, installs required packages, and launches the editor and output commands.
+# The script performs the following steps:
+# 1. Checks if a session with the given name already exists and kills it if it does.
+# 2. Retrieves the number of lines and columns in the terminal.
+# 3. Creates a new detached tmux session with the specified dimensions and names it.
+# 4. Creates a second window by splitting the current window horizontally.
+# 5. Enables mouse support and sets various tmux options for better mouse behavior.
+# 6. Checks if the Tmux Plugin Manager (TPM) is installed and installs it if not.
+# 7. Renames the panes in the session.
+# 8. Sends commands to the panes to run the editor and output commands.
+# 9. Attaches to the session and waits for the editor and output processes to finish.
+# 10. Removes the named pipe.
+# 11. Cleans up and exits the script.
+
+# Usage: create_session.sh
+
+# This function is responsible for cleaning up the resources used by the script.
+# It kills all existing processes associated with necessary scripts, removes temporary files,
+# and terminates the tmux session.
+cleanup() {
+    echo "Cleaning up create_session.sh..."
+    # Kill all existing processes associated with necessary scripts
+    pkill -9 -f "control_editor.sh"
+    pkill -9 -f "nyquist_output.sh"
+    pkill -9 -f "process_nyquist_input.sh"
+    rm -rf "$dir_path/.xlisppath"
+    rm -f "$PIPE_FILE" # Remove the named pipe
+    tmux kill-session -a -t $session_name
+    exit
+}
+
+# Function to check if a package is installed and prompt the user to install it if not found
+# Arguments:
+#   - package_name: The name of the package to check
+#   - command_name: The name of the command associated with the package
+check_package() {
+    package_name=$1
+    command_name=$2
+    if ! command -v "$command_name" &> /dev/null
+    then
+        echo "$command_name could not be found"
+        read -p "Do you want to continue by installing $command_name? (yes/y/no/n) " -r input 
+        input=$(echo "$input" | tr '[:upper:]' '[:lower:]')
+        case $input in
+        y|yes)
+            install_package "$package_name"
+            ;;
+        *)
+            echo "Please install $command_name manually before running the script."
+            if [[ "$OSTYPE" == "linux-gnu"* ]]; then
+                # Linux
+                echo "On Linux, you can typically install $command_name using your distribution's package manager, e.g., 'sudo apt install $package_name' or 'sudo yum install $package_name'."
+            elif [[ "$OSTYPE" == "darwin"* ]]; then
+                # Mac OSX
+                echo "On macOS, you can install $command_name using Homebrew: 'brew install $package_name'."
+            else
+                echo "Please install $command_name manually before running the script."
+            fi
+            exit 1
+            ;;
+        esac
+    else
+        echo "$command_name already installed!"
+    fi
+}
+
+# Function to install a package using the appropriate package manager based on the operating system
+# Arguments:
+#   - package_name: The name of the package to install
+install_package() {
+    package_name=$1
     if [[ "$OSTYPE" == "linux-gnu"* ]]; then
         # Linux
-        echo "On Linux, you can typically install realpath using your distribution's package manager, e.g., 'sudo apt install coreutils' or 'sudo yum install coreutils'."
-        cmd="apt-get install -y coreutils"
+        sudo apt-get install -y "$package_name"
     elif [[ "$OSTYPE" == "darwin"* ]]; then
         # Mac OSX
-        echo "On macOS, you can install realpath using Homebrew: 'brew install coreutils'."
-        cmd="brew install coreutils"
-    
+        brew install "$package_name"
+    else
+        echo "Please install $package_name manually before running the script."
+        exit 1
     fi
-    
-    read -p "Do you want to continue by installing realpath? (yes/y/no/n) " -r input 
-    input=$(echo "$input" | tr '[:upper:]' '[:lower:]')
-    case $input in
-      y|yes)
-          # If user agrees, install realpath
-          if [[ "$OSTYPE" == "linux-gnu"* ]]; then
-              sudo apt-get install -y coreutils
-          elif [[ "$OSTYPE" == "darwin"* ]]; then
-              brew install coreutils
-          else
-              echo "Please install realpath manually before running script."
-              exit 1
-          fi
-          ;;
-      *)
-          echo "Please install realpath manually before running script."
-          exit 1
-          ;;
-  esac
-fi
+}
 
-# delete existing session if it has the same name
+# Set trap to call cleanup function when SIGINT (Ctrl+C), SIGTERM or EXIT signal is received
+trap 'cleanup' EXIT INT TERM HUP
+
+check_package "coreutils" "realpath"
+check_package "tmux" "tmux"
+
 session_name="NyquistIDE"
 programming_env="Nyquist"
 window_1="Editor"
@@ -46,12 +99,11 @@ dir_path="$(realpath "$(dirname "$0")")"
 run_editor_command="$dir_path/control_editor.sh"
 run_output_command="$dir_path/nyquist_output.sh"
 
-echo "$run_editor_command"
-
 # Kill all exisiting processes associated with necessary scripts
 pkill -9 -f "control_editor.sh"
 pkill -9 -f "nyquist_output.sh"
 pkill -9 -f "process_nyquist_input.sh"
+rm -rf "$dir_path/.xlisppath"
 
 # Create a named pipe if it doesn't exist
 PIPE_FILE=/tmp/control_editor_pipe
@@ -61,63 +113,12 @@ then
     mkfifo "$PIPE_FILE"
 fi
 
-# Define cleanup procedure
-cleanup() {
-    # echo "Script interrupted. Cleaning up..."
-    echo "Cleaning up create_session.sh..."
-    rm -f "$PIPE_FILE" # Remove the named pipe
-    tmux kill-session -a -t $session_name
-    exit
-}
-
-# Check if tmux is installed
-# python3 ./install_package.py
-if ! command -v tmux &> /dev/null
-then
-    echo "tmux could not be found"
-    # Attempt to install tmux
-    if [[ "$OSTYPE" == "linux-gnu"* ]]; then
-        # Linux
-        echo "On Linux, you can typically install tmux using your distribution's package manager, e.g., 'sudo apt install tmux' or 'sudo yum install tmux'."
-        cmd="apt-get install -y tmux"
-    elif [[ "$OSTYPE" == "darwin"* ]]; then
-        # Mac OSX
-        echo "On macOS, you can install tmux using Homebrew: 'brew install tmux'."
-        cmd="brew install tmux"
-    
-    fi
-    
-    read -p "Do you want to continue by installing tmux? (yes/y/no/n) " -r input 
-    input=$(echo "$input" | tr '[:upper:]' '[:lower:]')
-    case $input in
-      y|yes)
-          # If user agrees, install tmux
-          if [[ "$OSTYPE" == "linux-gnu"* ]]; then
-              sudo apt-get install -y tmux
-          elif [[ "$OSTYPE" == "darwin"* ]]; then
-              brew install tmux
-          else
-              echo "Please install tmux manually before running script."
-              exit 1
-          fi
-          ;;
-      *)
-          echo "Please install tmux manually before running script."
-          exit 1
-          ;;
-  esac
-fi
-
-# Set trap to call cleanup function when SIGINT (Ctrl+C), SIGTERM or EXIT signal is received
-trap 'cleanup' EXIT INT TERM HUP
-
 if tmux has-session -t "$session_name" 2>/dev/null; then
-  tmux kill-session -t "$session_name"
+    tmux kill-session -t "$session_name"
 fi
 
 lines="$(tput lines)"
 columns="$(tput cols)"
-
 
 echo "Creating Editor..."
 tmux new -d -x "$lines" -y "$columns" -s "$session_name" -n "$programming_env" 'bash'
@@ -159,3 +160,5 @@ trap - INT TERM EXIT HUP
 tmux kill-session -a -t $session_name 2>/dev/null
 
 echo "Exiting create_session.sh..."
+
+exit

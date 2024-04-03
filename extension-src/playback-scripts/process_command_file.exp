@@ -1,39 +1,47 @@
 #!/usr/local/bin/expect -f
 
+# This script checks if a file named PIPE_FILE exists. If it does, it spawns the NyquistIDE application and interacts with it using the expect command.
+# The code opens the PIPE_FILE for reading and enters a loop that reads from the pipe as long as the file exists.
+# Each line read from the pipe is passed as a command to the NyquistIDE application using the run_comm procedure.
+# After running the command, the code waits for the prompt "SAL> " before reading the next line from the pipe.
+# The loop continues until the PIPE_FILE no longer exists, at which point the pipe is closed.
+
 # Function to execute a command
-proc run_comm { CMD } { 
-    # expect -exact "SAL> "
+#
+# This function takes a command as input and executes it. It sends the command to the system and logs the output.
+#
+# Parameters:
+#   - CMD: The command to be executed
+#
+# Example usage:
+#   run_comm "ls -l"
+proc run_comm { CMD } {
     send -- "$CMD\n\r"
     log_user 1
-    # expect -exact "SAL> "
-    # log_user 0
-    # send -- "(exit)\n\r"
 }
 
-# set input [lindex $argv 0];
 set PIPE_FILE "/tmp/control_editor_pipe"
 
 set input ""
 
+
 if {[file exists $PIPE_FILE]} {
     spawn /Applications/NyquistIDE.app/Contents/Java/ny
-    # Execute the command
-    # log_user 0
     expect -exact "> "
     send -- "(sal)\r"
     expect -exact "SAL> "
-    # log_user 0
+    
     # Open the pipe for reading
     set pipe [open $PIPE_FILE r]
-    sleep 1
+    
     # Loop as long as the pipe exists
     while {[file exists $PIPE_FILE]} {
         # Read from the pipe
         while {$input == ""} {
             set input [gets $pipe]
         }
+    
         log_user 1
-        puts "$input"
         # Run the command
         run_comm "$input"
         log_user 1
@@ -41,6 +49,7 @@ if {[file exists $PIPE_FILE]} {
         expect -exact "SAL> "
         set input ""
     }
+    
     # Close the pipe
     close $pipe
 }
