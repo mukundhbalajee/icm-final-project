@@ -3,8 +3,27 @@
 # Initialize variables
 file=""
 command=""
-export XLISPPATH=/Users/mukundhbalajee1/Desktop/Personal/nyquist/runtime:/Users/mukundhbalajee1/Desktop/Personal/nyquist/lib
 dir_path="$(realpath "$(dirname "$0")")"
+
+# Path to the file where the XLISPPATH will be saved
+PATH_FILE="$dir_path/.xlisppath"
+
+# Check if the path file exists
+if [[ -f "$PATH_FILE" ]]; then
+    # Read the path from the file and set the XLISPPATH variable
+    XLISPPATH=$(cat "$PATH_FILE")
+    export XLISPPATH
+else
+    # Ask the user for the path and save it to the file
+    echo "Please enter the XLISPPATH (format: /path/to/nyquist):"
+    read userPath
+    echo "$userPath/runtime:$userPath/lib" > "$PATH_FILE"
+    export XLISPPATH="$userPath/runtime:$userPath/lib"
+fi
+
+# Confirm the XLISPPATH is set
+echo "XLISPPATH is set to: $XLISPPATH"
+
 
 # Function to display help message
 show_help() {
