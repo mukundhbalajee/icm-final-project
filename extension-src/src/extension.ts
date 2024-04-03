@@ -7,7 +7,7 @@ import * as fs from 'fs';
 // persistent terminal for SAL commands
 let salTerminal: vscode.Terminal | undefined = undefined;
 let salConfig: boolean = false;
-let playBackFile: string = '';
+let rePlayFile: string = '';
 const path = require('path'); // Require the path module
 const os = require('os');
 const extensionId = 'sukumo28.wav-preview';
@@ -45,9 +45,6 @@ export function activate(context: vscode.ExtensionContext) {
 		if (document.languageId === 'sal') {
 			// Perform an action if a JavaScript file is opened
 			configSalTerminal(context.extensionPath);
-
-			// copy the temp.wav file to the workspace
-			copyWavFile();
 		}
 	});
 
@@ -92,7 +89,6 @@ export function activate(context: vscode.ExtensionContext) {
 					}
 				});
 
-				copyWavFile();
 			} else {
 				vscode.window.showErrorMessage('Please select text in a SAL file');
 			}
@@ -150,7 +146,6 @@ export function activate(context: vscode.ExtensionContext) {
 					}
 				});
 
-				copyWavFile();
 			} else {
 				vscode.window.showErrorMessage('Please select text in a SAL file');
 			}
@@ -160,6 +155,11 @@ export function activate(context: vscode.ExtensionContext) {
 
 	// code-symphony.replay
 	let replay = vscode.commands.registerCommand('code-symphony.replay', function () {
+		let status = copyWavFile();
+		if (!status) {
+			return;
+		}
+
 		// TODO: multiple workspaces
 		const workspaceDir = getWorkspaceDirectory();
 		if (!workspaceDir) {
@@ -170,7 +170,7 @@ export function activate(context: vscode.ExtensionContext) {
 		// Create and show a new webview
 		const panel = vscode.window.createWebviewPanel(
 			'audioPlayer', // Identifies the type of the webview. Used internally
-			'Audio Player', // Title of the panel displayed to the user
+			`${rePlayFile}`, // Title of the panel displayed to the user
 			vscode.ViewColumn.Two, // Editor column to show the new webview panel in.
 			{
 				// Enable scripts in the webview
@@ -186,7 +186,7 @@ export function activate(context: vscode.ExtensionContext) {
 
 		// Get path to resource on disk
 		const onDiskPath = vscode.Uri.file(
-			path.join(context.extensionPath, 'res', 'audio', 'p5cross2.mp3')
+			path.join(workspaceDir, ".tmp", rePlayFile)
 		);
 
 		// And get the special URI to use with the webview
@@ -207,9 +207,10 @@ export function activate(context: vscode.ExtensionContext) {
 			<head>
 				<meta charset="UTF-8">
 				<meta name="viewport" content="width=device-width, initial-scale=1.0">
-				<title>Audio Player</title>
+				<title>${rePlayFile}</title>
 			</head>
 			<body>
+				<p>Playing from: ./.tmp/${rePlayFile}</p>
 				<audio controls autoplay>
 					<source src="${audioSrc}" type="${type}">
 				</audio>
@@ -294,16 +295,25 @@ function configSalTerminal(extensionPath: string) {
 }
 
 function copyWavFile() {
-	return;
 	const username = getCurrentUsername().toLowerCase();
 	const tempWavPath = `/tmp/${username}-temp.wav`;
 	const workspaceDir = getWorkspaceDirectory();
+	if (!workspaceDir) {
+		vscode.window.showErrorMessage("No workspace or active file found.");
+		return null;
+	}
+	const tmpDirPath = `${workspaceDir}/.tmp`;
+	if (!fs.existsSync(tmpDirPath)) {
+        fs.mkdirSync(tmpDirPath);
+        console.log('The .tmp directory has been created.');
+    }
+
 
 	// iteratively find the current index for the temp_num.wav file
 	let index = 0;
 	let destinationPath = '';
 	while (true) {
-		destinationPath = `${workspaceDir}/temp_${index}.wav`;
+		destinationPath = `${tmpDirPath}/temp_${index}.wav`;
 		try {
 			fs.accessSync(destinationPath, fs.constants.F_OK);
 			index++;
@@ -313,27 +323,29 @@ function copyWavFile() {
 		}
 	}
 
-	if (!workspaceDir) {
-		return;
+	try {
+		// Check if the file exists
+		fs.accessSync(tempWavPath, fs.constants.F_OK);
+
+		// If the file exists, copy it
+		fs.renameSync(tempWavPath, destinationPath);
+		console.log('File moved successfully.');
+
+		rePlayFile = `temp_${index}.wav`;
+		vscode.window.showInformationMessage(`Moved ${tempWavPath} to ${destinationPath}`);
+	} catch (err) {
+		const error = err as NodeJS.ErrnoException;
+		if (error.code === 'ENOENT') {
+			// Handle the case where the file does not exist
+			vscode.window.showErrorMessage(`File not found: ${tempWavPath}`);
+		} else {
+			// Handle other possible errors
+			console.error('Error:', error);
+		}
+		return null;
 	}
 
-	fs.access(tempWavPath, fs.constants.F_OK, (err) => {
-		if (!err) {
-			// File exists
-			fs.copyFile(tempWavPath, destinationPath, (err) => {
-				if (err) {
-					console.error('Error copying file:', err);
-					return;
-				}
-				console.log('File copied successfully.');
-			});
-
-			playBackFile = destinationPath;
-		} else {
-			// File does not exist
-			console.log('temp.wav does not exist');
-		}
-	});
+	return destinationPath;
 }
 
 function getCurrentUsername() {
