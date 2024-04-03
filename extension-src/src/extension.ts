@@ -126,25 +126,25 @@ export function activate(context: vscode.ExtensionContext) {
 				const selection = activeTextEditor.selection;
 				const selectedText = activeTextEditor.document.getText(selection);
 				console.log(selectedText);
-				vscode.window.showInformationMessage(selectedText);
-				// Send the selected text to the terminal
-				const pipePath = '/tmp/control_editor_pipe';
-				fs.open(pipePath, 'a', (err, fd) => {
-					if (!err) {
-						fs.write(fd, selectedText + '\n', (err) => {
-							if (err) {
-								vscode.window.showErrorMessage('Failed to write to pipe');
-							}
-						});
-						fs.close(fd, (err) => {
-							if (err) {
-								vscode.window.showErrorMessage('Failed to close pipe');
-							}
-						});
-					} else {
-						vscode.window.showErrorMessage('Failed to open pipe');
-					}
-				});
+				try {
+					vscode.window.showInformationMessage(selectedText);
+					// Send the selected text to the terminal
+					const pipePath = '/tmp/control_editor_pipe';
+					fs.open(pipePath, 'a', (err, fd) => {
+						if (!err) {
+							fs.writeFileSync(fd, selectedText + '\n');
+							fs.close(fd, (err) => {
+								if (err) {
+									vscode.window.showErrorMessage('Failed to close pipe');
+								}
+							});
+						} else {
+							vscode.window.showErrorMessage('Failed to open pipe');
+						}
+					});
+				} catch (error) {
+					vscode.window.showErrorMessage('An error occurred while sending the selected text to the pipe');
+				}
 
 			} else {
 				vscode.window.showErrorMessage('Please select text in a SAL file');
@@ -286,7 +286,7 @@ function configSalTerminal(extensionPath: string) {
 		let scriptDirectory = path.dirname(__dirname);
 		// vscode.window.showInformationMessage(`Script directory: ${scriptDirectory}`);
 
-		salTerminal.sendText(`cd  "${extensionPath}"`);
+		salTerminal.sendText(`cd  "${workspaceFolder}"`);
 		salTerminal.sendText(`clear`);
 		salTerminal.sendText(`bash "${scriptDirectory}/playback-scripts/create_session.sh"`);
 		salConfig = true;

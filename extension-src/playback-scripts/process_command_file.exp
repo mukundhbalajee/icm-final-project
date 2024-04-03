@@ -15,8 +15,20 @@
 #
 # Example usage:
 #   run_comm "ls -l"
+match_max 9000000
 proc run_comm { CMD } {
     send -- "$CMD\n\r"
+    set NewLineChar "\n\r"
+    expect {
+        $NewLineChar { append ny_out $expect_out(buffer); exp_continue}
+        eof { append ny_out $expect_out(buffer) }
+    }
+    # # puts $ny_out
+
+    # # Clear the expect_out(buffer)
+    # # puts "$expect_out(buffer)"
+    # expect -exact "SAL> "
+    # flush stdout
     log_user 1
 }
 
@@ -40,12 +52,12 @@ if {[file exists $PIPE_FILE]} {
         while {$input == ""} {
             set input [gets $pipe]
         }
-    
+        # puts "$input"
         log_user 1
         # Run the command
         run_comm "$input"
+        # flush stdout
         log_user 1
-        sleep 1
         expect -exact "SAL> "
         set input ""
     }
