@@ -84,7 +84,7 @@
 			"patterns": [
 				{
 					"name": "keyword.control.sal",
-					"match": "\\b(while|for|return|set|display|define|function)\\b"
+					"match": "\\b(while|for|return|set|display|define|function|play|exec|plot)\\b"
 				},
 				{
 					"name": "keyword.control.less.sal",
