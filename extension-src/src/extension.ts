@@ -276,7 +276,7 @@ function configSalTerminal(extensionPath: string) {
 		let scriptDirectory = path.dirname(__dirname);
 		// vscode.window.showInformationMessage(`Script directory: ${scriptDirectory}`);
 
-		salTerminal.sendText(`cd  "${workspaceFolder}"`);
+		salTerminal.sendText(`cd  "${extensionPath}"`);
 		salTerminal.sendText(`clear`);
 		salTerminal.sendText(`bash "${scriptDirectory}/playback-scripts/create_session.sh"`);
 		salConfig = true;
