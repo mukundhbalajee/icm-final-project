@@ -1,5 +1,42 @@
 #!/bin/bash
 
+# Check if realpath is installed
+if ! command -v realpath &> /dev/null
+then
+    echo "realpath could not be found"
+    # Attempt to install realpath
+    if [[ "$OSTYPE" == "linux-gnu"* ]]; then
+        # Linux
+        echo "On Linux, you can typically install realpath using your distribution's package manager, e.g., 'sudo apt install coreutils' or 'sudo yum install coreutils'."
+        cmd="apt-get install -y coreutils"
+    elif [[ "$OSTYPE" == "darwin"* ]]; then
+        # Mac OSX
+        echo "On macOS, you can install realpath using Homebrew: 'brew install coreutils'."
+        cmd="brew install coreutils"
+    
+    fi
+    
+    read -p "Do you want to continue by installing realpath? (yes/y/no/n) " -r input 
+    input=$(echo "$input" | tr '[:upper:]' '[:lower:]')
+    case $input in
+      y|yes)
+          # If user agrees, install realpath
+          if [[ "$OSTYPE" == "linux-gnu"* ]]; then
+              sudo apt-get install -y coreutils
+          elif [[ "$OSTYPE" == "darwin"* ]]; then
+              brew install coreutils
+          else
+              echo "Please install realpath manually before running script."
+              exit 1
+          fi
+          ;;
+      *)
+          echo "Please install realpath manually before running script."
+          exit 1
+          ;;
+  esac
+fi
+
 # delete existing session if it has the same name
 session_name="NyquistIDE"
 programming_env="Nyquist"
