@@ -19,23 +19,26 @@ trap 'cleanup' EXIT INT TERM HUP
 
 # Read input from the named pipe
 if [[ -p "$PIPE_FILE" ]]; then
-    # Continuously display the contents of the log file
-    while [[ -p "$PIPE_FILE" ]]; do
 
-        echo -n "SAL> "
+    # Execute the command with process_nyquist_input.sh
+    bash "$dir_path/process_nyquist_input.sh" -c "play"
+    # # Continuously display the contents of the log file
+    # while [[ -p "$PIPE_FILE" ]]; do
 
-        if read -t 1 -r input < "$PIPE_FILE"; then
-            # Print the input
-            echo "$input"
+    #     echo -n "SAL> "
+
+    #     if read -t 1 -r input < "$PIPE_FILE"; then
+    #         # Print the input
+    #         echo "$input"
             
-            if [[ "$input" == "exit" ]]; then
-                break
-            fi
+    #         if [[ "$input" == "exit" ]]; then
+    #             break
+    #         fi
 
-            # Execute the command with process_nyquist_input.sh
-            bash "$dir_path/process_nyquist_input.sh" -c "$input"
-        fi
-    done
+    #         # Execute the command with process_nyquist_input.sh
+    #         bash "$dir_path/process_nyquist_input.sh" -c "$input"
+    #     fi
+    # done
 else
     echo "Named pipe does not exist."
 fi

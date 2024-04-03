@@ -68,7 +68,7 @@ export function activate(context: vscode.ExtensionContext) {
 				const fileUri = activeTextEditor.document.uri;
 				const content = `load "${fileUri.fsPath}"`;
 				const pipePath = '/tmp/control_editor_pipe';
-				
+
 				fs.open(pipePath, 'a', (err, fd) => {
 					if (!err) {
 						fs.write(fd, content + '\n', (err) => {

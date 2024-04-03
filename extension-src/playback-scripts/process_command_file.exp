@@ -2,19 +2,45 @@
 
 # Function to execute a command
 proc run_comm { CMD } { 
-    # Execute the command
-    log_user 0
+    # expect -exact "SAL> "
+    send -- "$CMD\n\r"
+    log_user 1
+    # expect -exact "SAL> "
+    # log_user 0
+    # send -- "(exit)\n\r"
+}
+
+# set input [lindex $argv 0];
+set PIPE_FILE "/tmp/control_editor_pipe"
+
+set input ""
+
+if {[file exists $PIPE_FILE]} {
     spawn /Applications/NyquistIDE.app/Contents/Java/ny
+    # Execute the command
+    # log_user 0
     expect -exact "> "
     send -- "(sal)\r"
     expect -exact "SAL> "
-    send -- "$CMD\n\r"
-    log_user 1
-    expect -exact "SAL> "
-    log_user 0
-    send -- "(exit)\n\r"
+    # log_user 0
+    # Open the pipe for reading
+    set pipe [open $PIPE_FILE r]
+    sleep 1
+    # Loop as long as the pipe exists
+    while {[file exists $PIPE_FILE]} {
+        # Read from the pipe
+        while {$input == ""} {
+            set input [gets $pipe]
+        }
+        log_user 1
+        puts "$input"
+        # Run the command
+        run_comm "$input"
+        log_user 1
+        sleep 1
+        expect -exact "SAL> "
+        set input ""
+    }
+    # Close the pipe
+    close $pipe
 }
-
-set input [lindex $argv 0];
-
-run_comm "$input"
