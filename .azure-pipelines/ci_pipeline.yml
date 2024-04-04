@@ -1,0 +1,16 @@
+trigger:
+- main
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+steps:
+- script: |
+    echo Installing dependencies...
+    npm install
+    echo Packaging VSCode extension...
+    npm install -g vsce
+    vsce package
+    echo Running tests...
+    npm test
+  displayName: 'Build and Test'
