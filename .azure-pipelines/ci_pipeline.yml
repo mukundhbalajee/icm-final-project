@@ -1,8 +1,7 @@
 trigger:
-- main
+- CI-pipeline
 
-pool:
-  vmImage: 'ubuntu-latest'
+pool: mukundh-mbp
 
 steps:
 - script: |
