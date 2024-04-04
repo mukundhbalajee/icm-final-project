@@ -65,4 +65,5 @@ fi
 # Confirm the XLISPPATH is set
 XLISPPATH=$(cat "$PATH_FILE")
 echo "XLISPPATH is set to: "$XLISPPATH""
+clear
 exit
