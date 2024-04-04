@@ -13,5 +13,5 @@ steps:
     vsce package
     vsce publish
     echo Running tests...
-    npm test
+    npm run test
   displayName: 'Build and Test'
