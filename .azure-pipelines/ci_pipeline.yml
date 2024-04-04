@@ -12,5 +12,5 @@ steps:
     npm install -g vsce
     vsce package
     echo Running tests...
-    npm test
+    npm run test
   displayName: 'Build and Test'
