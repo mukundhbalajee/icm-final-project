@@ -84,7 +84,7 @@
 			"patterns": [
 				{
 					"name": "keyword.control.sal",
-					"match": "\\b(while|for|return|set|display|define|function|play|exec|plot)\\b"
+					"match": "\\b(while|for|return|set|display|define|function|play|exec|plot|print)\\b"
 				},
 				{
 					"name": "keyword.control.less.sal",
@@ -108,7 +108,7 @@
 			"patterns": [
 				{
 					"name": "keyword.operator.common.sal",
-					"match": "(\\s|^)(<|<=|>|>=|=|\\+|\\-|&|\\||@|@@|~|~~|@=|\\*|\\/)(\\s|$)"
+					"match": "(\\s|^)(<|<=|>|>=|=|\\+|\\-|&|\\||@|@@|~|~~|@=|\\*|\\/|\\!)(\\s|$)"
 				}
 			]
 		}
