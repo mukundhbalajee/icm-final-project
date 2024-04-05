@@ -19,10 +19,12 @@ match_max 9000000
 proc run_comm { CMD } {
     send -- "$CMD\n\r"
     set NewLineChar "\n\r"
-    expect {
-        $NewLineChar { append ny_out $expect_out(buffer); exp_continue}
-        eof { append ny_out $expect_out(buffer) }
-    }
+    set timeout -1
+    expect -exact "SAL> "
+    # expect {
+    #     $NewLineChar { append ny_out $expect_out(buffer); exp_continue}
+    #     eof { append ny_out $expect_out(buffer) }
+    # }
     # # puts $ny_out
 
     # # Clear the expect_out(buffer)
