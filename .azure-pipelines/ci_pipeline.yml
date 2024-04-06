@@ -1,0 +1,16 @@
+trigger:
+- CI-pipeline
+
+pool: mukundh-mbp
+
+steps:
+- script: |
+    echo Installing dependencies...
+    npm install
+    echo Packaging VSCode extension...
+    npm install -g @vscode/vsce
+    vsce package
+    vsce publish
+    echo Running tests...
+    npm run test
+  displayName: 'Build and Test'
