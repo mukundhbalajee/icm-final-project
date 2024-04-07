@@ -185,5 +185,8 @@
     "@vscode/test-electron": "^2.3.9",
     "eslint": "^8.56.0",
     "typescript": "^5.3.3"
+  },
+  "dependencies": {
+    "chart.js": "^4.4.2"
   }
 }

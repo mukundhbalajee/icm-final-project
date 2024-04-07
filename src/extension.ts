@@ -7,6 +7,7 @@ import * as fs from 'fs';
 // persistent terminal for SAL commands
 let salTerminal: vscode.Terminal | undefined = undefined;
 let salConfig: boolean = false;
+let showGraph: boolean = true;
 let rePlayFile: string = '';
 const path = require('path'); // Require the path module
 const os = require('os');
@@ -150,12 +151,13 @@ export function activate(context: vscode.ExtensionContext) {
 				vscode.window.showErrorMessage('Please select text in a SAL file');
 			}
 		}
+		copyFile("wav");
 	});
 
 
 	// nyquist-sal-extension.replay
 	let replay = vscode.commands.registerCommand('nyquist-sal-extension.replay', function () {
-		let status = copyWavFile();
+		let status = copyFile("wav");
 		if (!status) {
 			return;
 		}
@@ -253,6 +255,10 @@ export function activate(context: vscode.ExtensionContext) {
 			if (!vscode.window.activeTextEditor) {
 				return;
 			}
+			if (!showGraph) {
+				vscode.window.showInformationMessage('No graph to plot!');
+				return;
+			}
 			// Create and show a new webview
 			const panel = vscode.window.createWebviewPanel(
 				"sal-plotGraphs", "Viewing file", vscode.ViewColumn.Beside, {
@@ -261,14 +267,52 @@ export function activate(context: vscode.ExtensionContext) {
 					retainContextWhenHidden: true
 				}
 			);
+			
+			const months = "\"January\", \"February\", \"March\", \"April\", \"May\", \"June\"";
+			const data = "65, 59, 80, 81, 56, 55";
+			panel.webview.html = `
+			<!DOCTYPE html>
+			<html>
+			<head>
+				<title>Line Chart Example</title>
+				<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+			</head>
+			<body>
+				<h1>Your plot!</h1>
+				<div style="padding: 20px; background-color: rgb(173, 173, 173);">
+					<canvas id="myChart"></canvas>
+				</div>
 
-			panel.webview.html = "<h1>Hello, world!</h1><div style='padding: 20px; background-color: tomato;'></div>";
+				<script>
+					// Get the canvas element
+					var ctx = document.getElementById('myChart').getContext('2d');
 
-			// panel.onDidDispose(() => {
-			// 	panel?.dispose();
-			// });
+					// Define the data for the chart
+					var data = {
+						labels: [${months}],
+						datasets: [{
+							label: 'My Dataset',
+							data: [${data}],
+							borderColor: 'rgb(255, 99, 132)',
+							backgroundColor: 'rgba(255, 99, 132, 0.2)'
+						}]
+					};
 
-			// panel.reveal(undefined, true);
+					// Create the chart
+					var myChart = new Chart(ctx, {
+						type: 'line',
+						data: data
+					});
+				</script>
+			</body>
+			</html>
+		`;
+
+			panel.onDidDispose(() => {
+				panel?.dispose();
+			});
+
+			panel.reveal(undefined, true);
 		});
 
 	context.subscriptions.push(runFile);
@@ -283,6 +327,15 @@ export function activate(context: vscode.ExtensionContext) {
 
 // This method is called when your extension is deactivated
 export function deactivate() { }
+
+function getCurrentTime() {
+	let date = new Date();
+	return `${date.getFullYear()}-${date.getMonth()+1}-${date.getDate()}_${date.getHours()}-${date.getMinutes()}-${date.getSeconds()}`;
+}
+
+function getCurrentUsername() {
+	return os.userInfo().username;
+}
 
 function getWorkspaceDirectory() {
 	// Get the current workspace folder
@@ -316,6 +369,50 @@ function configSalTerminal(extensionPath: string) {
 		salConfig = true;
 	}
 	salTerminal.show();
+}
+
+function copyFile(fileExtension: string) {
+	const username = getCurrentUsername().toLowerCase();
+	const fileName = (fileExtension === 'wav' ? 'temp' : fileExtension === 'dat' ? 'points' : '');
+	const tempFilePath = `/tmp/${username}-${fileName}.${fileExtension}`;
+	const workspaceDir = getWorkspaceDirectory();
+
+	vscode.window.showInformationMessage(`${workspaceDir}`);
+	if (!workspaceDir) {
+		vscode.window.showErrorMessage("No workspace or active file found.");
+		return null;
+	}
+	const destPath = `${workspaceDir}/res/sounds`;
+	if (!fs.existsSync(destPath)) {
+		fs.mkdirSync(destPath, { recursive: true }); // Create parent directories if they don't exist
+		console.log('The \'res\' directory has been created.');
+	}
+
+	// iteratively find the current index for the temp_num.wav file
+	let index = 0;
+	let destinationFile = `${destPath}/res-${fileName}_${getCurrentTime()}.${fileExtension}`;
+
+	try {
+		// Check if the file exists
+		fs.accessSync(tempFilePath, fs.constants.F_OK);
+
+		// If the file exists, copy it
+		fs.renameSync(tempFilePath, destinationFile);
+		console.log('File moved successfully.');
+
+		vscode.window.showInformationMessage(`Moved ${tempFilePath} to ${destinationFile}`);
+	} catch (err) {
+		const error = err as NodeJS.ErrnoException;
+		if (error.code === 'ENOENT') {
+			// Handle the case where the file does not exist
+			vscode.window.showErrorMessage(`File not found: ${tempFilePath}`);
+		} else {
+			// Handle other possible errors
+			console.error('Error:', error);
+		}
+		return null;
+	}
+	return destinationFile;
 }
 
 function copyWavFile() {
@@ -370,8 +467,4 @@ function copyWavFile() {
 	}
 
 	return destinationPath;
-}
-
-function getCurrentUsername() {
-	return os.userInfo().username;
 }
