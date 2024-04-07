@@ -59,7 +59,7 @@ export function activate(context: vscode.ExtensionContext) {
 		});
 	});
 
-	let runFile = vscode.commands.registerCommand('code-symphony.runFile', () => {
+	let runFile = vscode.commands.registerCommand('nyquist-sal-extension.runFile', () => {
 		const activeTextEditor = vscode.window.activeTextEditor;
 		if (activeTextEditor) {
 			// Check if the active file is a SAL file
@@ -95,7 +95,7 @@ export function activate(context: vscode.ExtensionContext) {
 		}
 	});
 
-	let interactiveSal = vscode.commands.registerCommand('code-symphony.interactiveSal', () => {
+	let interactiveSal = vscode.commands.registerCommand('nyquist-sal-extension.interactiveSal', () => {
 		const userInput = vscode.window.showInputBox({
 			placeHolder: "Enter something",
 			prompt: "Please enter your input",
@@ -114,11 +114,11 @@ export function activate(context: vscode.ExtensionContext) {
 		// panel.webview.html = `<html><body>You can include any content here</body></html>`;
 
 		// message 
-		vscode.window.showInformationMessage('Hello World VSCode from code-symphony!');
+		vscode.window.showInformationMessage('Hello World VSCode from nyquist-sal-extension!');
 	});
 
 	// execute the highlighted code
-	let runSelection = vscode.commands.registerCommand('code-symphony.runSelection', () => {
+	let runSelection = vscode.commands.registerCommand('nyquist-sal-extension.runSelection', () => {
 		const activeTextEditor = vscode.window.activeTextEditor;
 		if (activeTextEditor) {
 			// Check if the active file is a SAL file
@@ -153,8 +153,8 @@ export function activate(context: vscode.ExtensionContext) {
 	});
 
 
-	// code-symphony.replay
-	let replay = vscode.commands.registerCommand('code-symphony.replay', function () {
+	// nyquist-sal-extension.replay
+	let replay = vscode.commands.registerCommand('nyquist-sal-extension.replay', function () {
 		let status = copyWavFile();
 		if (!status) {
 			return;
@@ -220,7 +220,7 @@ export function activate(context: vscode.ExtensionContext) {
 
 	});
 
-	let replay2 = vscode.commands.registerCommand('code-symphony.replay2', function () {
+	let replay2 = vscode.commands.registerCommand('nyquist-sal-extension.replay2', function () {
 		// Get the extension
 		const extension = vscode.extensions.getExtension(extensionId);
 		// console.log"???");
@@ -247,6 +247,30 @@ export function activate(context: vscode.ExtensionContext) {
 		}
 	});
 
+	let plotGraphs = vscode.commands.registerCommand(
+		"nyquist-sal-extension.plotGraph",
+		() => {
+			if (!vscode.window.activeTextEditor) {
+				return;
+			}
+			// Create and show a new webview
+			const panel = vscode.window.createWebviewPanel(
+				"sal-plotGraphs", "Viewing file", vscode.ViewColumn.Beside, {
+					enableScripts: true,
+					enableCommandUris: true,
+					retainContextWhenHidden: true
+				}
+			);
+
+			panel.webview.html = "<h1>Hello, world!</h1><div style='padding: 20px; background-color: tomato;'></div>";
+
+			// panel.onDidDispose(() => {
+			// 	panel?.dispose();
+			// });
+
+			// panel.reveal(undefined, true);
+		});
+
 	context.subscriptions.push(runFile);
 	context.subscriptions.push(interactiveSal);
 	context.subscriptions.push(runSelection);
@@ -254,7 +278,7 @@ export function activate(context: vscode.ExtensionContext) {
 	context.subscriptions.push(replay2);
 	context.subscriptions.push(openTextDocumentListener);
 	context.subscriptions.push(createFilesListener);
-
+	context.subscriptions.push(plotGraphs);
 }
 
 // This method is called when your extension is deactivated
