@@ -13,6 +13,69 @@ const path = require('path'); // Require the path module
 const os = require('os');
 const extensionId = 'sukumo28.wav-preview';
 
+function getCurrentTime() {
+	let date = new Date();
+	return `${date.getFullYear()}-${date.getMonth()+1}-${date.getDate()}_${date.getHours()}-${date.getMinutes()}-${date.getSeconds()}`;
+}
+
+function getCurrentUsername() {
+	return os.userInfo().username;
+}
+
+function getWorkspaceDirectory() {
+	// Get the current workspace folder
+	let workspaceFolder = vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders[0];
+	if (workspaceFolder) {
+		return workspaceFolder.uri.fsPath; // If a workspace is opened, return its path
+	} else if (vscode.window.activeTextEditor) {
+		// If no workspace is opened but a file is active, use its directory
+		const filePath = vscode.window.activeTextEditor.document.uri.fsPath;
+		return path.dirname(filePath);
+	} else {
+		// Handle cases where no workspace is open and no file is active
+		return null;
+	}
+}
+
+function checkIfFileExists(filePath: string, fileType: string, fileExtension: string) {
+	return fs.readdirSync(filePath).some(file => file.startsWith(fileType) && file.endsWith(fileExtension));
+}
+
+function getMostRecentFilePath(directory: string, fileName: string, fileExtension: string) {
+	const files = fs.readdirSync(directory);
+	const resFiles = files.filter(file => file.startsWith(fileName) && file.endsWith(fileExtension));
+
+	// Sort the files by creation time in descending order
+	resFiles.sort((a, b) => {
+		const aCreationTime = fs.statSync(path.join(directory, a)).birthtime;
+		const bCreationTime = fs.statSync(path.join(directory, b)).birthtime;
+		return bCreationTime.getTime() - aCreationTime.getTime();
+	});
+	return path.join(directory, resFiles[0]);
+}
+
+function configSalTerminal(extensionPath: string) {
+	if (!salTerminal) {
+		salTerminal = vscode.window.createTerminal('SAL Terminal');
+	}
+	if (!salConfig) {
+		let workspaceFolder = vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders[0] && vscode.workspace.workspaceFolders[0].uri.fsPath;
+		if (!workspaceFolder) {
+			vscode.window.showErrorMessage('No workspace found');
+			return;
+		}
+
+		// Change to the current directory directory
+		let scriptDirectory = path.dirname(__dirname);
+		salTerminal.sendText(`cd  "${workspaceFolder}"`);
+
+		salTerminal.sendText(`clear`);
+		salTerminal.sendText(`bash "${scriptDirectory}/playback-scripts/create_session.sh"`);
+
+		salConfig = true;
+	}
+	salTerminal.show();
+}
 
 // This method is called when your extension is activated
 // Your extension is activated the very first time the command is executed
@@ -101,11 +164,11 @@ export function activate(context: vscode.ExtensionContext) {
 			placeHolder: "Enter something",
 			prompt: "Please enter your input",
 		});
-		if (userInput) {
-			vscode.window.showInformationMessage(`User entered: ${userInput}`);
-		}
+		// if (userInput) {
+		// 	vscode.window.showInformationMessage(`User entered: ${userInput}`);
+		// }
 		// message 
-		vscode.window.showInformationMessage('Hello World VSCode from nyquist-sal-extension!');
+		// vscode.window.showInformationMessage('Hello World VSCode from nyquist-sal-extension!');
 	});
 
 	// execute the highlighted code
@@ -239,11 +302,15 @@ export function activate(context: vscode.ExtensionContext) {
 			if (!vscode.window.activeTextEditor) {
 				return;
 			}
-			
-			if (!showGraph) {
+
+			// Get all files in the 'res/plot/' directory
+			const plotDir = `${getWorkspaceDirectory()}/res/plot/`;
+
+			if (checkIfFileExists(plotDir, "points_", ".dat") === false) {
 				vscode.window.showInformationMessage('No graph to plot!');
 				return;
 			}
+
 			// Create and show a new webview
 			const panel = vscode.window.createWebviewPanel(
 				"sal-plotGraphs", "Viewing file", vscode.ViewColumn.Beside, {
@@ -252,10 +319,9 @@ export function activate(context: vscode.ExtensionContext) {
 					retainContextWhenHidden: true
 				}
 			);
-			
-			// Read the file "mukundhbalajee1-points.dat"
-			let workspaceFolder = vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders[0] && vscode.workspace.workspaceFolders[0].uri.fsPath;
-			const filePath = path.join(path.dirname(__dirname), 'mukundhbalajee1-points.dat');
+
+			// Construct the file path
+			const filePath = getMostRecentFilePath(plotDir, "points_", ".dat");
 			const fileContent = fs.readFileSync(filePath, 'utf-8');
 
 			// Parse the file content and extract the months and data
@@ -312,7 +378,7 @@ export function activate(context: vscode.ExtensionContext) {
 	if (vscode.workspace.workspaceFolders) {
 		const plotDir = path.join(vscode.workspace.workspaceFolders[0].uri.fsPath, 'res/plot/');
 		const soundDir = path.join(vscode.workspace.workspaceFolders[0].uri.fsPath, 'res/audio/');
-
+		
 		// Check if the directory exists
 		if (!fs.existsSync(plotDir)) {
 			// If the directory does not exist, create it
@@ -323,12 +389,9 @@ export function activate(context: vscode.ExtensionContext) {
 		if (!fs.existsSync(soundDir)) {
 			// If the directory does not exist, create it
 			fs.mkdirSync(soundDir, { recursive: true });
-		}			
-
+		}
 		fs.watch(plotDir, (eventType: string, filename: string | null) => {
-			if (filename?.endsWith('.dat')) {
-				showGraph = fs.existsSync(path.join(plotDir, filename));
-			}
+			showGraph = fs.readdirSync(plotDir).some(file => file.startsWith('points_') && file.endsWith('.dat'));
 		});
 	}
 
@@ -344,46 +407,3 @@ export function activate(context: vscode.ExtensionContext) {
 
 // This method is called when your extension is deactivated
 export function deactivate() { }
-
-function getCurrentTime() {
-	let date = new Date();
-	return `${date.getFullYear()}-${date.getMonth()+1}-${date.getDate()}_${date.getHours()}-${date.getMinutes()}-${date.getSeconds()}`;
-}
-
-function getCurrentUsername() {
-	return os.userInfo().username;
-}
-
-function getWorkspaceDirectory() {
-	// Get the current workspace folder
-	let workspaceFolder = vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders[0];
-	if (workspaceFolder) {
-		return workspaceFolder.uri.fsPath; // If a workspace is opened, return its path
-	} else if (vscode.window.activeTextEditor) {
-		// If no workspace is opened but a file is active, use its directory
-		const filePath = vscode.window.activeTextEditor.document.uri.fsPath;
-		return path.dirname(filePath);
-	} else {
-		// Handle cases where no workspace is open and no file is active
-		return null;
-	}
-}
-
-function configSalTerminal(extensionPath: string) {
-	if (!salTerminal) {
-		salTerminal = vscode.window.createTerminal('SAL Terminal');
-	}
-	if (!salConfig) {
-		let workspaceFolder = vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders[0] && vscode.workspace.workspaceFolders[0].uri.fsPath;
-
-		// Change to the current directory directory
-		let scriptDirectory = path.dirname(__dirname);
-		// vscode.window.showInformationMessage(`Script directory: ${scriptDirectory}`);
-
-		salTerminal.sendText(`cd  "${workspaceFolder}"`);
-		salTerminal.sendText(`clear`);
-		salTerminal.sendText(`bash "${scriptDirectory}/playback-scripts/create_session.sh"`);
-		salConfig = true;
-	}
-	salTerminal.show();
-}
