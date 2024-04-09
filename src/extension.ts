@@ -7,7 +7,7 @@ import * as fs from 'fs';
 // persistent terminal for SAL commands
 let salTerminal: vscode.Terminal | undefined = undefined;
 let salConfig: boolean = false;
-let showGraph: boolean = true;
+let showGraph: boolean = false;
 let rePlayFile: string = '';
 const path = require('path'); // Require the path module
 const os = require('os');
@@ -104,16 +104,6 @@ export function activate(context: vscode.ExtensionContext) {
 		if (userInput) {
 			vscode.window.showInformationMessage(`User entered: ${userInput}`);
 		}
-
-		// const panel = vscode.window.createWebviewPanel(
-		//     'webView', // Identifies the type of the webview. Used internally
-		//     'WebView Title', // Title of the panel displayed to the user
-		//     vscode.ViewColumn.One, // Editor column to show the new webview panel in.
-		//     {} // Webview options. More details can be found in the documentation.
-		// );
-
-		// panel.webview.html = `<html><body>You can include any content here</body></html>`;
-
 		// message 
 		vscode.window.showInformationMessage('Hello World VSCode from nyquist-sal-extension!');
 	});
@@ -151,17 +141,11 @@ export function activate(context: vscode.ExtensionContext) {
 				vscode.window.showErrorMessage('Please select text in a SAL file');
 			}
 		}
-		copyFile("wav");
 	});
 
 
-	// nyquist-sal-extension.replay
+	// TODO: Need to fix!!!!
 	let replay = vscode.commands.registerCommand('nyquist-sal-extension.replay', function () {
-		let status = copyFile("wav");
-		if (!status) {
-			return;
-		}
-
 		// TODO: multiple workspaces
 		const workspaceDir = getWorkspaceDirectory();
 		if (!workspaceDir) {
@@ -255,6 +239,7 @@ export function activate(context: vscode.ExtensionContext) {
 			if (!vscode.window.activeTextEditor) {
 				return;
 			}
+			
 			if (!showGraph) {
 				vscode.window.showInformationMessage('No graph to plot!');
 				return;
@@ -268,8 +253,16 @@ export function activate(context: vscode.ExtensionContext) {
 				}
 			);
 			
-			const months = "\"January\", \"February\", \"March\", \"April\", \"May\", \"June\"";
-			const data = "65, 59, 80, 81, 56, 55";
+			// Read the file "mukundhbalajee1-points.dat"
+			let workspaceFolder = vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders[0] && vscode.workspace.workspaceFolders[0].uri.fsPath;
+			const filePath = path.join(path.dirname(__dirname), 'mukundhbalajee1-points.dat');
+			const fileContent = fs.readFileSync(filePath, 'utf-8');
+
+			// Parse the file content and extract the months and data
+			const lines = fileContent.split('\n');
+			const months: string = lines.map((line: string) => line.split(' ')[0]).join(', ');
+			const data: string = lines.map((line: string) => line.split(' ')[1]).join(', ');
+
 			panel.webview.html = `
 			<!DOCTYPE html>
 			<html>
@@ -314,6 +307,30 @@ export function activate(context: vscode.ExtensionContext) {
 
 			panel.reveal(undefined, true);
 		});
+
+	// Watch the 'res/plot/' directory for changes
+	if (vscode.workspace.workspaceFolders) {
+		const plotDir = path.join(vscode.workspace.workspaceFolders[0].uri.fsPath, 'res/plot/');
+		const soundDir = path.join(vscode.workspace.workspaceFolders[0].uri.fsPath, 'res/audio/');
+
+		// Check if the directory exists
+		if (!fs.existsSync(plotDir)) {
+			// If the directory does not exist, create it
+			fs.mkdirSync(plotDir, { recursive: true });
+		}
+
+		// Check if the directory exists
+		if (!fs.existsSync(soundDir)) {
+			// If the directory does not exist, create it
+			fs.mkdirSync(soundDir, { recursive: true });
+		}			
+
+		fs.watch(plotDir, (eventType: string, filename: string | null) => {
+			if (filename?.endsWith('.dat')) {
+				showGraph = fs.existsSync(path.join(plotDir, filename));
+			}
+		});
+	}
 
 	context.subscriptions.push(runFile);
 	context.subscriptions.push(interactiveSal);
@@ -369,102 +386,4 @@ function configSalTerminal(extensionPath: string) {
 		salConfig = true;
 	}
 	salTerminal.show();
-}
-
-function copyFile(fileExtension: string) {
-	const username = getCurrentUsername().toLowerCase();
-	const fileName = (fileExtension === 'wav' ? 'temp' : fileExtension === 'dat' ? 'points' : '');
-	const tempFilePath = `/tmp/${username}-${fileName}.${fileExtension}`;
-	const workspaceDir = getWorkspaceDirectory();
-
-	vscode.window.showInformationMessage(`${workspaceDir}`);
-	if (!workspaceDir) {
-		vscode.window.showErrorMessage("No workspace or active file found.");
-		return null;
-	}
-	const destPath = `${workspaceDir}/res/sounds`;
-	if (!fs.existsSync(destPath)) {
-		fs.mkdirSync(destPath, { recursive: true }); // Create parent directories if they don't exist
-		console.log('The \'res\' directory has been created.');
-	}
-
-	// iteratively find the current index for the temp_num.wav file
-	let index = 0;
-	let destinationFile = `${destPath}/res-${fileName}_${getCurrentTime()}.${fileExtension}`;
-
-	try {
-		// Check if the file exists
-		fs.accessSync(tempFilePath, fs.constants.F_OK);
-
-		// If the file exists, copy it
-		fs.renameSync(tempFilePath, destinationFile);
-		console.log('File moved successfully.');
-
-		vscode.window.showInformationMessage(`Moved ${tempFilePath} to ${destinationFile}`);
-	} catch (err) {
-		const error = err as NodeJS.ErrnoException;
-		if (error.code === 'ENOENT') {
-			// Handle the case where the file does not exist
-			vscode.window.showErrorMessage(`File not found: ${tempFilePath}`);
-		} else {
-			// Handle other possible errors
-			console.error('Error:', error);
-		}
-		return null;
-	}
-	return destinationFile;
-}
-
-function copyWavFile() {
-	const username = getCurrentUsername().toLowerCase();
-	const tempWavPath = `/tmp/${username}-temp.wav`;
-	const workspaceDir = getWorkspaceDirectory();
-	if (!workspaceDir) {
-		vscode.window.showErrorMessage("No workspace or active file found.");
-		return null;
-	}
-	const tmpDirPath = `${workspaceDir}/.tmp`;
-	if (!fs.existsSync(tmpDirPath)) {
-        fs.mkdirSync(tmpDirPath);
-        console.log('The .tmp directory has been created.');
-    }
-
-
-	// iteratively find the current index for the temp_num.wav file
-	let index = 0;
-	let destinationPath = '';
-	while (true) {
-		destinationPath = `${tmpDirPath}/temp_${index}.wav`;
-		try {
-			fs.accessSync(destinationPath, fs.constants.F_OK);
-			index++;
-		}
-		catch (err) {
-			break;
-		}
-	}
-
-	try {
-		// Check if the file exists
-		fs.accessSync(tempWavPath, fs.constants.F_OK);
-
-		// If the file exists, copy it
-		fs.renameSync(tempWavPath, destinationPath);
-		console.log('File moved successfully.');
-
-		rePlayFile = `temp_${index}.wav`;
-		vscode.window.showInformationMessage(`Moved ${tempWavPath} to ${destinationPath}`);
-	} catch (err) {
-		const error = err as NodeJS.ErrnoException;
-		if (error.code === 'ENOENT') {
-			// Handle the case where the file does not exist
-			vscode.window.showErrorMessage(`File not found: ${tempWavPath}`);
-		} else {
-			// Handle other possible errors
-			console.error('Error:', error);
-		}
-		return null;
-	}
-
-	return destinationPath;
 }
