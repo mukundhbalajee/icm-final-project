@@ -326,8 +326,8 @@ export function activate(context: vscode.ExtensionContext) {
 
 			// Parse the file content and extract the months and data
 			const lines = fileContent.split('\n');
-			const months: string = lines.map((line: string) => line.split(' ')[0]).join(', ');
-			const data: string = lines.map((line: string) => line.split(' ')[1]).join(', ');
+			const time: string = lines.map((line: string) => line.split(' ')[0]).join(', ');
+			const value: string = lines.map((line: string) => line.split(' ')[1]).join(', ');
 
 			panel.webview.html = `
 			<!DOCTYPE html>
@@ -348,31 +348,55 @@ export function activate(context: vscode.ExtensionContext) {
 
 					// Define the data for the chart
 					var data = {
-						labels: [${months}],
+						labels: [${time}],
 						datasets: [{
-							label: 'My Dataset',
-							data: [${data}],
+							data: [${value}],
 							borderColor: 'rgb(255, 99, 132)',
 							backgroundColor: 'rgba(255, 99, 132, 0.2)'
 						}]
 					};
-
+					
+					var displayedXlabels = {};
 					// Create the chart
 					var myChart = new Chart(ctx, {
 						type: 'line',
-						data: data
+						data: data,
+						options: {
+							plugins: {
+								legend: {
+									display: false
+								}
+							},
+							scales: {
+								x: {
+									ticks: {
+										// For a category axis, the val is the index so the lookup via getLabelForValue is needed
+										callback: function(val, index) {
+											var value = parseInt(this.getLabelForValue(val));
+											if (!displayedXlabels[value]) {
+												displayedXlabels[value] = true;
+												return value;
+											}
+											else{
+												return '';
+											}
+										}
+									}
+								}
+							}
+						}
 					});
 				</script>
 			</body>
 			</html>
 		`;
 
-			panel.onDidDispose(() => {
-				panel?.dispose();
-			});
-
-			panel.reveal(undefined, true);
+		panel.onDidDispose(() => {
+			panel?.dispose();
 		});
+
+		panel.reveal(undefined, true);
+	});
 
 	// Watch the 'res/plot/' directory for changes
 	if (vscode.workspace.workspaceFolders) {
