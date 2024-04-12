@@ -385,23 +385,46 @@ export function activate(context: vscode.ExtensionContext) {
 									}
 								},
 								y: {
-									// ticks: {
-									// 	// For a category axis, the val is the index so the lookup via getLabelForValue is needed
-									// 	callback: function(val, index) {
-									// 		var value = parseInt(this.getLabelForValue(val));
-									// 		if (!displayedXlabels[value]) {
-									// 			displayedXlabels[value] = true;
-									// 			return value;
-									// 		}
-									// 		else{
-									// 			return '';
-									// 		}
-									// 	}
-									// }
+
+								},
+								x:{
+									ticks: {
+										// For a category axis, the val is the index so the lookup via getLabelForValue is needed
+										callback: function(val, index) {
+											console.log("val is: ");
+											console.log(val);
+											console.log("index is: ");
+											console.log(index);
+											// var value = parseInt(this.getLabelForValue(val));
+											// console.log(value);
+											if (!displayedXlabels[val]) {
+												displayedXlabels[val] = true;
+												return val;
+											}
+											else{
+												return '';
+											}
+										}
+									}
+								},
+								x: {
+									
 								}
 							}
 						}
 					});
+
+					// Print the console.log statements in the HTML
+					console.log = function(message) {
+						var logElement = document.createElement('p');
+						logElement.textContent = message;
+						document.body.appendChild(logElement);
+					};
+
+					// Show the console.log statements in a VSCode information message
+					vscode.window.showInformationMessage = function(message) {
+						console.log(message);
+					};
 				</script>
 			</body>
 			</html>
