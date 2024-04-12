@@ -8,8 +8,9 @@ clear
 dir_path="$(realpath "$(dirname "$0")")"
 
 # Path to the file where the XLISPPATH will be saved
-PATH_FILE="$dir_path/.xlisppath"
+PATH_FILE="$dir_path/config.cfg"
 XLISPPATH_SET=false
+source "$PATH_FILE"
 
 PIPE_FILE=/tmp/control_editor_pipe
 
@@ -25,6 +26,12 @@ cleanup() {
 # Set trap to call cleanup function when SIGINT (Ctrl+C), SIGTERM or EXIT signal is received
 trap 'cleanup' EXIT INT TERM HUP
 
+# Check if the named pipe exists
+if [[ ! -p "$PIPE_FILE" ]]; then
+    echo "Creating pipe ..."
+    mkfifo "$PIPE_FILE"
+fi
+
 echo "Waiting for XLISPPATH to be set..."
 
 # This script is responsible for setting the XLISPPATH environment variable by reading the path from a file.
@@ -32,6 +39,7 @@ echo "Waiting for XLISPPATH to be set..."
 # It also checks if the PATH_FILE exists, and if so, it reads the path from the file and sets the XLISPPATH variable.
 # The script runs in a loop until the XLISPPATH is successfully set.
 while [[ $XLISPPATH_SET == false ]]; do
+    source "$PATH_FILE"
     # Check is editor is open and running
     if ! pgrep -f "control_editor.sh" >/dev/null 2>&1; then
         echo "Editor closed..."
@@ -39,24 +47,21 @@ while [[ $XLISPPATH_SET == false ]]; do
         sleep 2
         exit
     fi
-    # Check if the PATH_FILE exists
-    if [[ -f "$PATH_FILE" ]]; then
-        # Read the path from the file
-        path=$(cat "$PATH_FILE")
-        export XLISPPATH="$path"
+    # Check if USER_NYQUIST_FILE_PATH is unset or empty
+    if [ -n "$USER_NYQUIST_FILE_PATH" ]; then
+        echo "Path set..."
+        export XLISPPATH="$USER_NYQUIST_FILE_PATH"
         XLISPPATH_SET=true
     fi
 done
 
-echo "XLISPPATH is set to: "$XLISPPATH""
-
-# Check if the named pipe exists
-if [[ ! -p "$PIPE_FILE" ]]; then
-    echo "Creating pipe ..."
-    mkfifo "$PIPE_FILE"
-fi
-
 # Start the process_command_file.exp
+while true; do
+    if grep -q "Exported XLISPPATH" "$PIPE_FILE"; then
+        break
+    fi
+    sleep 1
+done
 expect "$dir_path/process_command_file.exp" "$input"
 
 trap - EXIT INT TERM HUP

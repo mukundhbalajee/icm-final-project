@@ -357,6 +357,7 @@ export function activate(context: vscode.ExtensionContext) {
 					};
 					
 					var displayedXlabels = {};
+					var displayedYlabels = {};
 					// Create the chart
 					var myChart = new Chart(ctx, {
 						type: 'line',
@@ -368,13 +369,13 @@ export function activate(context: vscode.ExtensionContext) {
 								}
 							},
 							scales: {
-								x: {
+								y: {
 									ticks: {
 										// For a category axis, the val is the index so the lookup via getLabelForValue is needed
 										callback: function(val, index) {
-											var value = parseInt(this.getLabelForValue(val));
-											if (!displayedXlabels[value]) {
-												displayedXlabels[value] = true;
+											var value = parseInt(this.getLabelForValue(index));
+											if (!displayedYlabels[value]) {
+												displayedYlabels[value] = true;
 												return value;
 											}
 											else{
@@ -382,6 +383,21 @@ export function activate(context: vscode.ExtensionContext) {
 											}
 										}
 									}
+								},
+								y: {
+									// ticks: {
+									// 	// For a category axis, the val is the index so the lookup via getLabelForValue is needed
+									// 	callback: function(val, index) {
+									// 		var value = parseInt(this.getLabelForValue(val));
+									// 		if (!displayedXlabels[value]) {
+									// 			displayedXlabels[value] = true;
+									// 			return value;
+									// 		}
+									// 		else{
+									// 			return '';
+									// 		}
+									// 	}
+									// }
 								}
 							}
 						}
