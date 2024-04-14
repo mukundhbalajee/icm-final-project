@@ -86,14 +86,17 @@ export function activate(context: vscode.ExtensionContext) {
 
 	vscode.window.onDidChangeActiveTextEditor(editor => {
 		if (editor) {
-			const languageId = editor.document.languageId;
-			console.log(`The user is now editing a file of type: ${languageId}`);
+			const currDocument = editor.document;
+			console.log(`The user is now editing a file of type: ${currDocument.languageId}`);
 			// You can perform additional actions based on the file type here
 
-			if (languageId === 'sal') {
+			if (currDocument.languageId === 'sal') {
 				configSalTerminal(context.extensionPath);
 			}
-
+			// if (currDocument.languageId === 'plaintext' && currDocument.fileName.endsWith('.dat')) {
+			// 	vscode.window.showInformationMessage('Plotting selected graph...');
+			// 	vscode.commands.executeCommand('nyquist-sal-extension.plotGraph');
+			// }
 		}
 	}, null, context.subscriptions);
 
@@ -107,19 +110,28 @@ export function activate(context: vscode.ExtensionContext) {
 	let openTextDocumentListener = vscode.workspace.onDidOpenTextDocument(document => {
 		// Check the file type using the languageId or the file extension
 		if (document.languageId === 'sal') {
-			// Perform an action if a JavaScript file is opened
+			// Perform an action if a SAL file is opened
 			configSalTerminal(context.extensionPath);
 		}
+		// if (document.languageId === 'plaintext' && document.fileName.endsWith('.dat')) {
+		// 	vscode.window.showInformationMessage('Plotting selected graph...');
+		// 	vscode.commands.executeCommand('nyquist-sal-extension.plotGraph');
+		// }
 	});
 
 	let createFilesListener = vscode.workspace.onDidCreateFiles(event => {
 		event.files.forEach(uri => {
 			// Here you can check the file extension or other properties
 			if (uri.path.endsWith('.sal')) {
-				// Perform an action if the created file is a JavaScript file
+				// Perform an action if the created file is a SAL file
 				vscode.window.showInformationMessage('SAL file created');
 				configSalTerminal(context.extensionPath);
 			}
+			// if (uri.path.endsWith('.dat')) {
+			// 	// Perform an action if the created file is a dat file
+			// 	vscode.window.showInformationMessage('Plotting selected graph...');
+			// 	vscode.commands.executeCommand('nyquist-sal-extension.plotGraph');
+			// }
 		});
 	});
 
@@ -179,7 +191,6 @@ export function activate(context: vscode.ExtensionContext) {
 			if (activeTextEditor.document.languageId === 'sal') {
 				const selection = activeTextEditor.selection;
 				const selectedText = activeTextEditor.document.getText(selection);
-				console.log(selectedText);
 				try {
 					vscode.window.showInformationMessage(selectedText);
 					// Send the selected text to the terminal
@@ -296,40 +307,44 @@ export function activate(context: vscode.ExtensionContext) {
 		}
 	});
 
-	let plotGraphs = vscode.commands.registerCommand(
-		"nyquist-sal-extension.plotGraph",
-		() => {
-			if (!vscode.window.activeTextEditor) {
-				return;
+	let plotGraphs = vscode.commands.registerCommand("nyquist-sal-extension.plotGraph", function () {
+		if (!vscode.window.activeTextEditor) {
+			return;
+		}
+
+		// Get all files in the 'res/plot/' directory
+		const plotDir = `${getWorkspaceDirectory()}/res/plot/`;
+
+		// Check if the directory exists recursively
+		if (!fs.existsSync(plotDir)) {
+			fs.mkdirSync(plotDir, { recursive: true });
+		}
+
+		// Check if the file exists
+		if (checkIfFileExists(plotDir, "points_", ".dat") === false) {
+			vscode.window.showInformationMessage('No graph to plot!');
+			return;
+		}
+
+		// Create and show a new webview
+		const panel = vscode.window.createWebviewPanel(
+			"sal-plotGraphs", "Viewing file", vscode.ViewColumn.Beside, {
+				enableScripts: true,
+				enableCommandUris: true,
+				retainContextWhenHidden: true
 			}
+		);
 
-			// Get all files in the 'res/plot/' directory
-			const plotDir = `${getWorkspaceDirectory()}/res/plot/`;
+		// Construct the file path
+		const filePath = getMostRecentFilePath(plotDir, "points_", ".dat");
+		const fileContent = fs.readFileSync(filePath, 'utf-8');
 
-			if (checkIfFileExists(plotDir, "points_", ".dat") === false) {
-				vscode.window.showInformationMessage('No graph to plot!');
-				return;
-			}
+		// Parse the file content and extract the months and data
+		const lines = fileContent.split('\n');
+		const time: string = lines.map((line: string) => line.split(' ')[0]).join(', ');
+		const value: string = lines.map((line: string) => line.split(' ')[1]).join(', ');
 
-			// Create and show a new webview
-			const panel = vscode.window.createWebviewPanel(
-				"sal-plotGraphs", "Viewing file", vscode.ViewColumn.Beside, {
-					enableScripts: true,
-					enableCommandUris: true,
-					retainContextWhenHidden: true
-				}
-			);
-
-			// Construct the file path
-			const filePath = getMostRecentFilePath(plotDir, "points_", ".dat");
-			const fileContent = fs.readFileSync(filePath, 'utf-8');
-
-			// Parse the file content and extract the months and data
-			const lines = fileContent.split('\n');
-			const time: string = lines.map((line: string) => line.split(' ')[0]).join(', ');
-			const value: string = lines.map((line: string) => line.split(' ')[1]).join(', ');
-
-			panel.webview.html = `
+		panel.webview.html = `
 			<!DOCTYPE html>
 			<html>
 			<head>
@@ -339,12 +354,12 @@ export function activate(context: vscode.ExtensionContext) {
 			<body>
 				<h1>Your plot!</h1>
 				<div style="padding: 20px; background-color: rgb(173, 173, 173);">
-					<canvas id="myChart"></canvas>
+					<canvas id="userPlot"></canvas>
 				</div>
 
 				<script>
 					// Get the canvas element
-					var ctx = document.getElementById('myChart').getContext('2d');
+					var ctx = document.getElementById('userPlot').getContext('2d');
 
 					// Define the data for the chart
 					var data = {
@@ -359,72 +374,35 @@ export function activate(context: vscode.ExtensionContext) {
 					var displayedXlabels = {};
 					var displayedYlabels = {};
 					// Create the chart
-					var myChart = new Chart(ctx, {
+					var userPlot = new Chart(ctx, {
 						type: 'line',
 						data: data,
 						options: {
+							// This hook is called before the chart is updated
+							beforeUpdate: function(chart) {
+								chart.displayedXLabels = {};
+								chart.displayedYLabels = {};
+							},
 							plugins: {
 								legend: {
 									display: false
 								}
 							},
 							scales: {
-								y: {
-									ticks: {
-										// For a category axis, the val is the index so the lookup via getLabelForValue is needed
-										callback: function(val, index) {
-											var value = parseInt(this.getLabelForValue(index));
-											if (!displayedYlabels[value]) {
-												displayedYlabels[value] = true;
-												return value;
-											}
-											else{
-												return '';
-											}
-										}
-									}
-								},
-								y: {
-
-								},
-								x:{
-									ticks: {
-										// For a category axis, the val is the index so the lookup via getLabelForValue is needed
-										callback: function(val, index) {
-											console.log("val is: ");
-											console.log(val);
-											console.log("index is: ");
-											console.log(index);
-											// var value = parseInt(this.getLabelForValue(val));
-											// console.log(value);
-											if (!displayedXlabels[val]) {
-												displayedXlabels[val] = true;
-												return val;
-											}
-											else{
-												return '';
-											}
-										}
-									}
-								},
 								x: {
-									
+									type: 'linear',
+									ticks: {
+										stepSize: 0.5
+									},
+									min: 0,
+									max: Math.ceil(Math.max(...data.labels))
+								},
+								y:{
+									type: 'linear',
 								}
 							}
 						}
 					});
-
-					// Print the console.log statements in the HTML
-					console.log = function(message) {
-						var logElement = document.createElement('p');
-						logElement.textContent = message;
-						document.body.appendChild(logElement);
-					};
-
-					// Show the console.log statements in a VSCode information message
-					vscode.window.showInformationMessage = function(message) {
-						console.log(message);
-					};
 				</script>
 			</body>
 			</html>
@@ -433,7 +411,7 @@ export function activate(context: vscode.ExtensionContext) {
 		panel.onDidDispose(() => {
 			panel?.dispose();
 		});
-
+		
 		panel.reveal(undefined, true);
 	});
 

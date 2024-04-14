@@ -67,8 +67,8 @@
       },
       {
         "command": "nyquist-sal-extension.plotGraph",
-        "title": "Open WebView panel to display graph",
-        "category": "test"
+        "title": "Open WebView panel to display latest graph",
+        "category": "shortcuts"
       }
     ],
     "themes": [

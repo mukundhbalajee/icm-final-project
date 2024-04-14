@@ -25,12 +25,16 @@ get_xlisp_path() {
     # Ask the user for the path and save it to the file
     echo "Please enter the XLISPPATH (format: /path/to/nyquist):"
     read -p "Your path: " -r userPath
-
-    XLISPPATH="$userPath/nyquist/runtime:$userPath/nyquist/lib"
-    update_config "USER_NYQUIST_FILE_PATH" "$XLISPPATH"
-    echo "Exporting XLISPPATH..."
-    export XLISPPATH="$XLISPPATH"
-    # echo "$userPath/nyquist/runtime:$userPath/nyquist/lib" > "$PATH_FILE"
+    # Check if the nyquist folder exists in the path
+    if [[ -d "$userPath/nyquist" ]]; then
+        XLISPPATH="$userPath/nyquist/runtime:$userPath/nyquist/lib"
+        update_config "USER_NYQUIST_FILE_PATH" "$XLISPPATH"
+        echo "Exporting XLISPPATH..."
+        export XLISPPATH="$XLISPPATH"
+    else
+        echo "Invalid path. The nyquist folder does not exist in the specified path."
+        get_xlisp_path
+    fi
 }
 
 # Function to update or add a variable in the config file
@@ -76,23 +80,31 @@ if [[ -f "$PATH_FILE" ]]; then
     else
         # Read the path from the file and set the XLISPPATH variable
         echo $USER_NYQUIST_FILE_PATH
-        read -p "Is this the correct path? (yes/y/no/n) " -r input
-        input=$(echo "$input" | tr '[:upper:]' '[:lower:')
-        if [[ "$input" == "yes" || "$input" == "y" ]]; then
-            export XLISPPATH="$USER_NYQUIST_FILE_PATH"
-        else
-            echo "Reset your USER_NYQUIST_FILE_PATH."
-
-            if [[ ! -p "$PIPE_FILE" ]]; then
-                echo "Waiting for pipe to be created..."
-                while [[ ! -p "$PIPE_FILE" ]]; do
-                    sleep 1
-                done
-            fi
-
+        nyquist_folder="${USER_NYQUIST_FILE_PATH%%:*}"
+        if [[ ! -d "$(dirname "$nyquist_folder")" ]]; then
+            echo "The nyquist folder does not exist in the specified path."
             get_xlisp_path
+            echo "Exported XLISPPATH" > "$PIPE_FILE"
+        else
+            read -p "Is this the correct path? (yes/y/no/n) " -r input
+            input=$(echo "$input" | tr '[:upper:]' '[:lower:]')
+            if [[ "$input" == "yes" || "$input" == "y" ]]; then
+                export XLISPPATH="$USER_NYQUIST_FILE_PATH"
+                echo XLISPPATH set to "$XLISPPATH"
+            else
+                echo "Issue with nyquist path. Reset your Nyquist folder path..."
+
+                if [[ ! -p "$PIPE_FILE" ]]; then
+                    echo "Waiting for pipe to be created..."
+                    while [[ ! -p "$PIPE_FILE" ]]; do
+                        sleep 1
+                    done
+                fi
+
+                get_xlisp_path
+            fi
+            echo "Exported XLISPPATH" > "$PIPE_FILE"
         fi
-        echo "Exported XLISPPATH" > "$PIPE_FILE"
     fi
 fi
 
