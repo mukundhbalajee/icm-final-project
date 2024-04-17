@@ -225,59 +225,58 @@ export function activate(context: vscode.ExtensionContext) {
 		}
 	});
 
-	const sampleRateItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100);
-    sampleRateItem.command = "nyquist.setSampleRate";
-    sampleRateItem.text = `Sample Rate: ${vscode.workspace.getConfiguration('nyquist').get('sampleRate')} Hz`;
-    sampleRateItem.show();
-
-    const controlRateItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100);
-    controlRateItem.command = "nyquist.setControlRate";
-    controlRateItem.text = `Control Rate: ${vscode.workspace.getConfiguration('nyquist').get('controlRate')} Hz`;
-    controlRateItem.show();
-
-    const nyquistDirItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100);
-    nyquistDirItem.command = "nyquist.setNyquistDir";
-    nyquistDirItem.text = `Nyquist Dir: ${vscode.workspace.getConfiguration('nyquist').get('nyquistDir')}`;
-    nyquistDirItem.show();
-
-	context.subscriptions.push(vscode.commands.registerCommand('nyquist.setSampleRate', async () => {
-        const value = await vscode.window.showInputBox({ prompt: 'Enter a new sample rate (Hz)' });
-        if (value) {
-            await vscode.workspace.getConfiguration('nyquist').update('sampleRate', Number(value), vscode.ConfigurationTarget.Global);
-            sampleRateItem.text = `Sample Rate: ${value} Hz`;
-        }
-    }));
-
-    context.subscriptions.push(vscode.commands.registerCommand('nyquist.setControlRate', async () => {
-        const value = await vscode.window.showInputBox({ prompt: 'Enter a new control rate (Hz)' });
-        if (value) {
-            await vscode.workspace.getConfiguration('nyquist').update('controlRate', Number(value), vscode.ConfigurationTarget.Global);
-            controlRateItem.text = `Control Rate: ${value} Hz`;
-        }
-    }));
-
-	context.subscriptions.push(vscode.commands.registerCommand('nyquist.setNyquistDir', async () => {
-        const result = await vscode.window.showOpenDialog({
-            canSelectMany: false,
-            canSelectFolders: true,
-            canSelectFiles: false,
-            openLabel: 'Select Nyquist Directory'
-        });
-        if (result && result.length > 0) {
-            const folderPath = result[0].fsPath;
-            await vscode.workspace.getConfiguration('nyquist').update('nyquistDir', folderPath, vscode.ConfigurationTarget.Global);
-            nyquistDirItem.text = `Nyquist Dir: ${folderPath}`;
-        }
-    }));
-
-
 	context.subscriptions.push(runFile);
 	context.subscriptions.push(runSelection);
 	context.subscriptions.push(replay);
 	context.subscriptions.push(replay2);
 	context.subscriptions.push(openTextDocumentListener);
 	context.subscriptions.push(createFilesListener);
-	context.subscriptions.push(sampleRateItem, controlRateItem, nyquistDirItem);
+
+	const nyquistProvider = new NyquistTreeDataProvider();
+	const nyquistView = vscode.window.createTreeView('nyquistView', {
+        treeDataProvider: nyquistProvider
+    });
+    context.subscriptions.push(nyquistView);
+	context.subscriptions.push(
+        vscode.commands.registerCommand('nyquist.setSampleRate', async () => {
+            const result = await vscode.window.showInputBox({
+                placeHolder: "Enter the sample rate (Hz)"
+            });
+            if (result) {
+                await vscode.workspace.getConfiguration('nyquist').update('sampleRate', parseFloat(result), vscode.ConfigurationTarget.Global);
+				nyquistProvider.refresh();
+            }
+        }),
+
+        vscode.commands.registerCommand('nyquist.setControlRate', async () => {
+            const result = await vscode.window.showInputBox({
+                placeHolder: "Enter the control rate (Hz)"
+            });
+            if (result) {
+                await vscode.workspace.getConfiguration('nyquist').update('controlRate', parseFloat(result), vscode.ConfigurationTarget.Global);
+				nyquistProvider.refresh();
+            }
+        }),
+
+        vscode.commands.registerCommand('nyquist.setNyquistDir', async () => {
+            const result = await vscode.window.showOpenDialog({
+                canSelectMany: false,
+                canSelectFiles: false,
+                canSelectFolders: true,
+                openLabel: 'Select Folder'
+            });
+            if (result && result.length > 0) {
+                await vscode.workspace.getConfiguration('nyquist').update('nyquistDir', result[0].fsPath, vscode.ConfigurationTarget.Global);
+				// write the path to ./playback-scripts/.xlisppath
+				const path = result[0].fsPath;
+				const scriptDirectory = context.extensionPath;
+				const xlisppath = `${scriptDirectory}/playback-scripts/.xlisppath`;
+				fs.writeFileSync(xlisppath, path);
+				nyquistProvider.refresh();
+            }
+        })
+    );
+	
 }
 
 // This method is called when your extension is deactivated
@@ -375,4 +374,58 @@ function copyWavFile() {
 
 function getCurrentUsername() {
 	return os.userInfo().username;
+}
+
+class NyquistTreeDataProvider implements vscode.TreeDataProvider<NyquistItem> {
+    private _onDidChangeTreeData: vscode.EventEmitter<NyquistItem | undefined | null> = new vscode.EventEmitter<NyquistItem | undefined | null>();
+    readonly onDidChangeTreeData: vscode.Event<NyquistItem | undefined | null> = this._onDidChangeTreeData.event;
+
+    constructor() {}
+
+    refresh(): void {
+        this._onDidChangeTreeData.fire(null);
+    }
+
+    getTreeItem(element: NyquistItem): vscode.TreeItem | Thenable<vscode.TreeItem> {
+        return element;
+    }
+
+    getChildren(element?: NyquistItem): vscode.ProviderResult<NyquistItem[]> {
+        if (element) {
+            return element.children;
+        } else {
+            // Root level items
+            return [
+                new NyquistItem('Sample Rate', {
+                    command: 'nyquist.setSampleRate',
+                    title: 'Set Sample Rate',
+                    arguments: []
+                }, `${vscode.workspace.getConfiguration('nyquist').get('sampleRate')} Hz`),
+                new NyquistItem('Control Rate', {
+                    command: 'nyquist.setControlRate',
+                    title: 'Set Control Rate',
+                    arguments: []
+                }, `${vscode.workspace.getConfiguration('nyquist').get('controlRate')} Hz`),
+                new NyquistItem('Nyquist Directory', {
+                    command: 'nyquist.setNyquistDir',
+                    title: 'Set Nyquist Directory',
+                    arguments: []
+                }, `${vscode.workspace.getConfiguration('nyquist').get('nyquistDir')}`)
+            ];
+        }
+    }
+}
+
+class NyquistItem extends vscode.TreeItem {
+    children: NyquistItem[] | undefined;
+
+    constructor(
+        public readonly label: string,
+        public readonly command?: vscode.Command,
+        public readonly description?: string
+    ) {
+        super(label, vscode.TreeItemCollapsibleState.None);
+        this.tooltip = `${this.label} - ${this.description}`;
+        this.description = description;
+    }
 }
