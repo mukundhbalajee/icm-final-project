@@ -11,7 +11,8 @@
     "Other"
   ],
   "activationEvents": [
-    "onLanguage:sal"
+    "onLanguage:sal",
+    "onView:nyquistView"
   ],
   "main": "./out/extension.js",
   "contributes": {
@@ -59,6 +60,18 @@
       {
         "command": "code-symphony.replay2",
         "title": "Replay2"
+      },
+      {
+        "command": "nyquist.setSampleRate",
+        "title": "Set Sample Rate"
+      },
+      {
+        "command": "nyquist.setControlRate",
+        "title": "Set Control Rate"
+      },
+      {
+        "command": "nyquist.setNyquistDir",
+        "title": "Set Nyquist Directory"
       }
     ],
     "themes": [
@@ -105,9 +118,29 @@
       "nyquistContainer": [
         {
           "id": "nyquistView",
-          "name": "<Display Name>"
+          "name": "Settings"
         }
       ]
+    },
+    "configuration": {
+      "title": "Nyquist Configuration",
+      "properties": {
+        "nyquist.sampleRate": {
+          "type": "number",
+          "default": 44100,
+          "description": "Sample rate for Nyquist audio processing"
+        },
+        "nyquist.controlRate": {
+          "type": "number",
+          "default": 4410,
+          "description": "Control rate for Nyquist audio processing"
+        },
+        "nyquist.nyquistDir": {
+          "type": "string",
+          "default": "",
+          "description": "Directory for Nyquist files"
+        }
+      }
     },
     "menus": {
       "editor/title": [
