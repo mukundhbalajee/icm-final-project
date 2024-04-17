@@ -1,0 +1,8 @@
+
+play pluck(c4)
+
+define function hello()
+    begin
+        print "hello world"
+    end
+    
