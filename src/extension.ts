@@ -95,28 +95,6 @@ export function activate(context: vscode.ExtensionContext) {
 		}
 	});
 
-	let interactiveSal = vscode.commands.registerCommand('code-symphony.interactiveSal', () => {
-		const userInput = vscode.window.showInputBox({
-			placeHolder: "Enter something",
-			prompt: "Please enter your input",
-		});
-		if (userInput) {
-			vscode.window.showInformationMessage(`User entered: ${userInput}`);
-		}
-
-		// const panel = vscode.window.createWebviewPanel(
-		//     'webView', // Identifies the type of the webview. Used internally
-		//     'WebView Title', // Title of the panel displayed to the user
-		//     vscode.ViewColumn.One, // Editor column to show the new webview panel in.
-		//     {} // Webview options. More details can be found in the documentation.
-		// );
-
-		// panel.webview.html = `<html><body>You can include any content here</body></html>`;
-
-		// message 
-		vscode.window.showInformationMessage('Hello World VSCode from code-symphony!');
-	});
-
 	// execute the highlighted code
 	let runSelection = vscode.commands.registerCommand('code-symphony.runSelection', () => {
 		const activeTextEditor = vscode.window.activeTextEditor;
@@ -248,7 +226,6 @@ export function activate(context: vscode.ExtensionContext) {
 	});
 
 	context.subscriptions.push(runFile);
-	context.subscriptions.push(interactiveSal);
 	context.subscriptions.push(runSelection);
 	context.subscriptions.push(replay);
 	context.subscriptions.push(replay2);
@@ -258,7 +235,9 @@ export function activate(context: vscode.ExtensionContext) {
 }
 
 // This method is called when your extension is deactivated
-export function deactivate() { }
+export function deactivate() {
+	console.log("Deactivated");
+}
 
 function getWorkspaceDirectory() {
 	// Get the current workspace folder

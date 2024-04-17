@@ -1,5 +1,6 @@
 {
   "name": "code-symphony",
+  "publisher": "icm",
   "displayName": "code-symphony",
   "description": "vscode extension for SAL",
   "version": "0.0.1",
@@ -49,10 +50,6 @@
         "command": "code-symphony.replay",
         "title": "Replay",
         "icon": "$(debug-reverse-continue)"
-      },
-      {
-        "command": "code-symphony.interactiveSal",
-        "title": "Interactive Sal"
       },
       {
         "command": "code-symphony.runSelection",
@@ -131,12 +128,6 @@
         },
         {
           "command": "code-symphony.replay"
-        }
-      ],
-      "view/item/context": [
-        {
-          "command": "code-symphony.interactiveSal",
-          "when": "view == nyquistView"
         }
       ]
     },
