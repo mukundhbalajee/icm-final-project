@@ -271,7 +271,8 @@ export function activate(context: vscode.ExtensionContext) {
 				const path = result[0].fsPath;
 				const scriptDirectory = context.extensionPath;
 				const xlisppath = `${scriptDirectory}/playback-scripts/.xlisppath`;
-				fs.writeFileSync(xlisppath, path);
+				const storePath = `${xlisppath}/nyquist/runtime:${xlisppath}/nyquist/lib`
+				fs.writeFileSync(storePath, path);
 				nyquistProvider.refresh();
             }
         })
