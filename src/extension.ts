@@ -41,17 +41,18 @@ function checkIfFileExists(filePath: string, fileType: string, fileExtension: st
 	return fs.readdirSync(filePath).some(file => file.startsWith(fileType) && file.endsWith(fileExtension));
 }
 
-function getMostRecentFilePath(directory: string, fileName: string, fileExtension: string) {
+function getMostRecentFileName(directory: string, fileName: string, fileExtension: string) {
+	// Construct the file path
 	const files = fs.readdirSync(directory);
 	const resFiles = files.filter(file => file.startsWith(fileName) && file.endsWith(fileExtension));
-
+	
 	// Sort the files by creation time in descending order
 	resFiles.sort((a, b) => {
 		const aCreationTime = fs.statSync(path.join(directory, a)).birthtime;
 		const bCreationTime = fs.statSync(path.join(directory, b)).birthtime;
 		return bCreationTime.getTime() - aCreationTime.getTime();
 	});
-	return path.join(directory, resFiles[0]);
+	return resFiles[0];
 }
 
 function configSalTerminal(extensionPath: string) {
@@ -334,30 +335,123 @@ export function activate(context: vscode.ExtensionContext) {
 				retainContextWhenHidden: true
 			}
 		);
+		
+		const currFileName = getMostRecentFileName(plotDir, "points_", ".dat");
+		const filePath = path.join(plotDir, currFileName);
 
-		// Construct the file path
-		const filePath = getMostRecentFilePath(plotDir, "points_", ".dat");
+		// Check if the directory exists
+		if (!fs.existsSync(plotDir)) {
+			vscode.window.showErrorMessage('Directory does not exist');
+			return;
+		}
+
+		// Check if the file exists
+		if (!fs.existsSync(filePath)) {
+			vscode.window.showErrorMessage('File does not exist');
+			return;
+		}
+
 		const fileContent = fs.readFileSync(filePath, 'utf-8');
+
+		// Get the file names in the directory
+		let workspaceFolder = vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders[0] && vscode.workspace.workspaceFolders[0].uri.fsPath;
+		var checkboxesHtml = '';
+		if (!workspaceFolder) {
+			vscode.window.showErrorMessage('No workspace found');
+		}
+		else {
+			let fileNames = fs.readdirSync(path.join(workspaceFolder, 'res', 'plot'));
+
+			// Filter out non-file entities
+			fileNames = fileNames.filter(fileName => fs.statSync(path.join(workspaceFolder, 'res', 'plot', fileName)).isFile());
+			// Create a string of <option> elements
+			//options = fileNames.map(fileName => `<option value="${fileName}">${fileName}</option>`).join('');
+			// New code to create a checkbox for each file
+			checkboxesHtml = fileNames.map(fileName => {
+				const isChecked = fileName === currFileName ? 'checked' : '';
+				return `<label><input type="checkbox" name="fileCheckbox" value="${fileName}" onchange="updateData()" ${isChecked}>${fileName}</label><br>`;
+			}).join('');
+		}
 
 		// Parse the file content and extract the months and data
 		const lines = fileContent.split('\n');
 		const time: string = lines.map((line: string) => line.split(' ')[0]).join(', ');
 		const value: string = lines.map((line: string) => line.split(' ')[1]).join(', ');
 
+		// Setup message listener from the webview
+		panel.webview.onDidReceiveMessage(
+			message => {
+				switch (message.command) {
+					case 'getFileData':
+						// Read each selected file
+						const datasets = message.filename.map((filename: string) => {
+							const filePath = path.join(workspaceFolder, 'res', 'plot', filename);
+							const fileContent = fs.readFileSync(filePath, 'utf8');
+							const lines = fileContent.split('\n');
+							const timeData = lines.map(line => line.split(' ')[0]);
+							const valueData = lines.map(line => line.split(' ')[1]);
+							return {
+								filename: filename,
+								time: timeData,
+								value: valueData
+							};
+						});
+
+						// Send the datasets back to the webview
+						panel.webview.postMessage({ command: 'updateChart', datasets: datasets });
+						break;
+				}
+			},
+			undefined,
+			context.subscriptions
+		);
+
 		panel.webview.html = `
 			<!DOCTYPE html>
 			<html>
 			<head>
-				<title>Line Chart Example</title>
+				<title>Nyquist Graphs!</title>
 				<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+				<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@1.0.1"></script>
 			</head>
 			<body>
 				<h1>Your plot!</h1>
+				<div id="fileCheckboxes">
+					${checkboxesHtml}
+				</div>
+				<button onclick="resetZoom()">Reset Zoom</button>
+
 				<div style="padding: 20px; background-color: rgb(173, 173, 173);">
 					<canvas id="userPlot"></canvas>
 				</div>
 
 				<script>
+					const vscode = acquireVsCodeApi();
+					// Function to send a message to the extension to request file data
+					function updateData() {
+						// Get all checked checkboxes
+						const selectedFiles = Array.from(document.querySelectorAll('input[name="fileCheckbox"]:checked')).map(checkbox => checkbox.value);
+						// Send filenames to the extension
+						vscode.postMessage({
+						command: 'getFileData',
+						filename: selectedFiles
+						});
+					}
+
+					function generateRandomColor(opacity = 1) {
+						const r = Math.floor(Math.random() * 255);
+						const g = Math.floor(Math.random() * 255);
+						const b = Math.floor(Math.random() * 255);
+						return "rgba(" + r + ", " + g + ", " + b + ", " + opacity + ")";
+					}
+
+					// This function will be called when the user clicks the 'Reset Zoom' button
+					function resetZoom() {
+						if (userPlot) {
+							userPlot.resetZoom();
+						}
+					}
+
 					// Get the canvas element
 					var ctx = document.getElementById('userPlot').getContext('2d');
 
@@ -365,6 +459,7 @@ export function activate(context: vscode.ExtensionContext) {
 					var data = {
 						labels: [${time}],
 						datasets: [{
+							label: "${currFileName}",
 							data: [${value}],
 							borderColor: 'rgb(255, 99, 132)',
 							backgroundColor: 'rgba(255, 99, 132, 0.2)'
@@ -384,8 +479,19 @@ export function activate(context: vscode.ExtensionContext) {
 								chart.displayedYLabels = {};
 							},
 							plugins: {
-								legend: {
-									display: false
+								zoom: {
+									// pan: {
+									// 	enabled: true,
+									// 	mode: 'x',
+									// 	// Set your desired panning options here
+									// },
+									zoom: {
+										drag: {
+											enabled: true,
+											mode: 'x' 
+										},
+										mode: 'x',
+									},
 								}
 							},
 							scales: {
@@ -393,14 +499,37 @@ export function activate(context: vscode.ExtensionContext) {
 									type: 'linear',
 									ticks: {
 										stepSize: 0.5
-									},
-									min: 0,
-									max: Math.ceil(Math.max(...data.labels))
+									}
+									// min: 0,
+									// max: Math.ceil(Math.max(...data.labels))
 								},
 								y:{
 									type: 'linear',
-								}
+								},
 							}
+						}
+					});
+
+					// Handler for the message sent from the extension with the file data
+					window.addEventListener('message', event => {
+						const message = event.data; // The JSON data our extension sent
+						switch (message.command) {
+							case 'updateChart':
+								// Clear existing datasets
+								userPlot.data.datasets = [];
+
+								// Add each dataset to the chart
+								message.datasets.forEach(dataset => {
+									userPlot.data.labels = dataset.time; // Assumes all datasets have the same x-axis labels
+									userPlot.data.datasets.push({
+										label: dataset.filename,
+										data: dataset.value,
+										borderColor: generateRandomColor(), // You need to define this function
+										backgroundColor: generateRandomColor(0.2), // Adjust opacity for background
+									});
+								});
+								userPlot.update();
+								break;
 						}
 					});
 				</script>
