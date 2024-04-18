@@ -37,14 +37,14 @@ function getWorkspaceDirectory() {
 	}
 }
 
-function checkIfFileExists(filePath: string, fileType: string, fileExtension: string) {
-	return fs.readdirSync(filePath).some(file => file.startsWith(fileType) && file.endsWith(fileExtension));
+function checkIfFileExists(filePath: string, fileExtension: string) {
+	return fs.readdirSync(filePath).some(file => file.endsWith(fileExtension));
 }
 
-function getMostRecentFileName(directory: string, fileName: string, fileExtension: string) {
+function getMostRecentFileName(directory: string, fileExtension: string) {
 	// Construct the file path
 	const files = fs.readdirSync(directory);
-	const resFiles = files.filter(file => file.startsWith(fileName) && file.endsWith(fileExtension));
+	const resFiles = files.filter(file => file.endsWith(fileExtension));
 	
 	// Sort the files by creation time in descending order
 	resFiles.sort((a, b) => {
@@ -322,7 +322,7 @@ export function activate(context: vscode.ExtensionContext) {
 		}
 
 		// Check if the file exists
-		if (checkIfFileExists(plotDir, "points_", ".dat") === false) {
+		if (checkIfFileExists(plotDir, ".dat") === false) {
 			vscode.window.showInformationMessage('No graph to plot!');
 			return;
 		}
@@ -336,7 +336,7 @@ export function activate(context: vscode.ExtensionContext) {
 			}
 		);
 		
-		const currFileName = getMostRecentFileName(plotDir, "points_", ".dat");
+		const currFileName = getMostRecentFileName(plotDir, ".dat");
 		const filePath = path.join(plotDir, currFileName);
 
 		// Check if the directory exists
@@ -416,6 +416,7 @@ export function activate(context: vscode.ExtensionContext) {
 			</head>
 			<body>
 				<h1>Your plot!</h1>
+				<button onclick="toggleDropdown()" class="dropbtn">Select Files</button>
 				<div id="fileCheckboxes">
 					${checkboxesHtml}
 				</div>
@@ -561,7 +562,7 @@ export function activate(context: vscode.ExtensionContext) {
 			fs.mkdirSync(soundDir, { recursive: true });
 		}
 		fs.watch(plotDir, (eventType: string, filename: string | null) => {
-			showGraph = fs.readdirSync(plotDir).some(file => file.startsWith('points_') && file.endsWith('.dat'));
+			showGraph = fs.readdirSync(plotDir).some(file => file.endsWith('.dat'));
 		});
 	}
 
