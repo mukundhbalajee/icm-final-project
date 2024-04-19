@@ -125,10 +125,50 @@
     "configuration": {
       "title": "Nyquist Configuration",
       "properties": {
+        "nyquist.salMode": {
+          "type": "boolean",
+          "default": true,
+          "description": "Start in SAL mode (not Lisp)"
+        },
+        "nyquist.soundOn": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable sound output in PLAY command"
+        },
+        "nyquist.autoNorm": {
+          "type": "boolean",
+          "default": true,
+          "description": "Autonorm"
+        },
+        "nyquist.salTracable": {
+          "type": "boolean",
+          "default": true,
+          "description": "Print SAL traceback on SAL error"
+        },
+        "nyquist.lispTracable": {
+          "type": "boolean",
+          "default": true,
+          "description": "Print Lisp traceback on Lisp error"
+        },
+        "nyquist.salBreakEnable": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable XLISP break on SAL error"
+        },
+        "nyquist.lispBreakEnable": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable XLISP break on Lisp error"
+        },
+        "nyquist.gcFlag": {
+          "type": "boolean",
+          "default": true,
+          "description": "Print info about garbage collection"
+        },
         "nyquist.sampleRate": {
           "type": "number",
           "default": 44100,
-          "description": "Sample rate for Nyquist audio processing"
+          "description": "Sound sample rate for Nyquist audio processing"
         },
         "nyquist.controlRate": {
           "type": "number",
@@ -139,6 +179,11 @@
           "type": "string",
           "default": "",
           "description": "Directory for Nyquist files"
+        },
+        "nyquist.preferAudioDevice": {
+          "type": "string",
+          "default": "",
+          "description": "Preferred audio device name"
         }
       }
     },

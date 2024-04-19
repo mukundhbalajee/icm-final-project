@@ -53,7 +53,6 @@ export function activate(context: vscode.ExtensionContext) {
 			// Here you can check the file extension or other properties
 			if (uri.path.endsWith('.sal')) {
 				// Perform an action if the created file is a JavaScript file
-				vscode.window.showInformationMessage('SAL file created');
 				configSalTerminal(context.extensionPath);
 			}
 		});
@@ -66,6 +65,10 @@ export function activate(context: vscode.ExtensionContext) {
 			if (activeTextEditor.document.languageId === 'sal') {
 				if (!salTerminal) {
 					configSalTerminal(context.extensionPath);
+				}
+				if (!salConfig) {
+					vscode.window.showErrorMessage('SAL configuration not ready. Please try again later.');
+					return;
 				}
 
 				const fileUri = activeTextEditor.document.uri;
@@ -101,11 +104,18 @@ export function activate(context: vscode.ExtensionContext) {
 		if (activeTextEditor) {
 			// Check if the active file is a SAL file
 			if (activeTextEditor.document.languageId === 'sal') {
+				if (!salTerminal) {
+					configSalTerminal(context.extensionPath);
+				}
+				if (!salConfig) {
+					vscode.window.showErrorMessage('SAL configuration not ready. Please try again later.');
+					return;
+				} 
+
 				const selection = activeTextEditor.selection;
 				const selectedText = activeTextEditor.document.getText(selection);
 				console.log(selectedText);
 				try {
-					vscode.window.showInformationMessage(selectedText);
 					// Send the selected text to the terminal
 					const pipePath = '/tmp/control_editor_pipe';
 					fs.open(pipePath, 'a', (err, fd) => {
@@ -238,6 +248,61 @@ export function activate(context: vscode.ExtensionContext) {
     });
     context.subscriptions.push(nyquistView);
 	context.subscriptions.push(
+		vscode.commands.registerCommand('nyquist.toggleSALMode', async () => {
+			const current = vscode.workspace.getConfiguration('nyquist').get('salMode');
+			await vscode.workspace.getConfiguration('nyquist').update('salMode', true, vscode.ConfigurationTarget.Global);
+			vscode.window.showInformationMessage(`Only support SAL mode: ${!current}`);
+			nyquistProvider.refresh();
+		}),
+		vscode.commands.registerCommand('nyquist.toggleSoundOn', async () => {
+			const current = vscode.workspace.getConfiguration('nyquist').get('soundOn');
+			await vscode.workspace.getConfiguration('nyquist').update('soundOn', !current, vscode.ConfigurationTarget.Global);
+			writeToPipe(`exec sound-${current ? 'off' : 'on'}()`);
+			nyquistProvider.refresh();
+		}
+		),
+		vscode.commands.registerCommand('nyquist.toggleAutoNorm', async () => {
+			const current = vscode.workspace.getConfiguration('nyquist').get('autoNorm');
+			await vscode.workspace.getConfiguration('nyquist').update('autoNorm', !current, vscode.ConfigurationTarget.Global);
+			writeToPipe(`exec autonorm-${current ? 'off' : 'on'}()`);
+			nyquistProvider.refresh();
+		}
+		),
+		vscode.commands.registerCommand('nyquist.toggleSalTracable', async () => {
+			const current = vscode.workspace.getConfiguration('nyquist').get('salTracable');
+			await vscode.workspace.getConfiguration('nyquist').update('salTracable', !current, vscode.ConfigurationTarget.Global);
+			writeToPipe(`exec sal-tracenable(${boolToLisp(!current)})`);
+			nyquistProvider.refresh();
+		}
+		),
+		vscode.commands.registerCommand('nyquist.toggleLispTracable', async () => {
+			const current = vscode.workspace.getConfiguration('nyquist').get('lispTracable');
+			await vscode.workspace.getConfiguration('nyquist').update('lispTracable', !current, vscode.ConfigurationTarget.Global);
+			writeToPipe(`exec xlisp-tracenable(${boolToLisp(!current)})`);
+			nyquistProvider.refresh();
+		}
+		),
+		vscode.commands.registerCommand('nyquist.toggleSalBreakEnable', async () => {
+			const current = vscode.workspace.getConfiguration('nyquist').get('salBreakEnable');
+			await vscode.workspace.getConfiguration('nyquist').update('salBreakEnable', !current, vscode.ConfigurationTarget.Global);
+			writeToPipe(`exec sal-breakenable(${boolToLisp(!current)})`);
+			nyquistProvider.refresh();
+		}
+		),
+		vscode.commands.registerCommand('nyquist.toggleLispBreakEnable', async () => {
+			const current = vscode.workspace.getConfiguration('nyquist').get('lispBreakEnable');
+			await vscode.workspace.getConfiguration('nyquist').update('lispBreakEnable', !current, vscode.ConfigurationTarget.Global);
+			writeToPipe(`exec xlisp-breakenable(${boolToLisp(!current)})`);
+			nyquistProvider.refresh();
+		}
+		),
+		vscode.commands.registerCommand('nyquist.toggleGcFlag', async () => {
+			const current = vscode.workspace.getConfiguration('nyquist').get('gcFlag');
+			await vscode.workspace.getConfiguration('nyquist').update('gcFlag', !current, vscode.ConfigurationTarget.Global);
+			writeToPipe(`set *gc-flag* = ${boolToLisp(!current)}`);
+			nyquistProvider.refresh();
+		}
+		),
         vscode.commands.registerCommand('nyquist.setSampleRate', async () => {
             const result = await vscode.window.showInputBox({
                 placeHolder: "Enter the sample rate (Hz)"
@@ -314,7 +379,8 @@ function configSalTerminal(extensionPath: string) {
 		salTerminal.sendText(`cd  "${workspaceFolder}"`);
 		salTerminal.sendText(`clear`);
 		salTerminal.sendText(`bash "${scriptDirectory}/playback-scripts/create_session.sh"`);
-		salConfig = true;
+
+		setNyquistPreferences();
 	}
 	salTerminal.show();
 }
@@ -397,6 +463,55 @@ class NyquistTreeDataProvider implements vscode.TreeDataProvider<NyquistItem> {
         } else {
             // Root level items
             return [
+				new NyquistItem('SAL Mode', {
+                    command: 'nyquist.toggleSALMode',
+                    title: 'Toggle SAL Mode',
+                    arguments: [],
+					tooltip: 'Start in SAL mode (not Lisp)'
+                }, vscode.workspace.getConfiguration('nyquist').get('salMode') ? 'Enabled' : 'Disabled'),
+				new NyquistItem('Sound On', {
+                    command: 'nyquist.toggleSoundOn',
+                    title: 'Toggle Sound On/Off',
+                    arguments: [],
+					tooltip: 'Enable sound output in PLAY command'
+                }, vscode.workspace.getConfiguration('nyquist').get('soundOn') ? 'Enabled' : 'Disabled'),
+				new NyquistItem('Auto Norm', {
+                    command: 'nyquist.toggleAutoNorm',
+                    title: 'Toggle Auto Norm On/Off',
+                    arguments: [],
+					tooltip: 'Autonorm'
+                }, vscode.workspace.getConfiguration('nyquist').get('autoNorm') ? 'Enabled' : 'Disabled'),
+				new NyquistItem('SAL Tracable', {
+                    command: 'nyquist.toggleSalTracable',
+                    title: 'Toggle SAL Tracable On/Off',
+                    arguments: [],
+					tooltip: 'Print SAL traceback on SAL error'
+                }, vscode.workspace.getConfiguration('nyquist').get('salTracable') ? 'Enabled' : 'Disabled'),
+				new NyquistItem('LISP Tracable', {
+                    command: 'nyquist.toggleLispTracable',
+                    title: 'Toggle LISP Tracable On/Off',
+                    arguments: [],
+					tooltip: 'Print Lisp traceback on Lisp error'
+                }, vscode.workspace.getConfiguration('nyquist').get('lispTracable') ? 'Enabled' : 'Disabled'),
+				new NyquistItem('SAL BreakEnable', {
+                    command: 'nyquist.toggleSalBreakEnable',
+                    title: 'Toggle SAL BreakEnable On/Off',
+                    arguments: [],
+					tooltip: 'Enable XLISP break on SAL error'
+                }, vscode.workspace.getConfiguration('nyquist').get('salBreakEnable') ? 'Enabled' : 'Disabled'),
+				new NyquistItem('LISP BreakEnable', {
+                    command: 'nyquist.toggleLispBreakEnable',
+                    title: 'Toggle LISP BreakEnable On/Off',
+                    arguments: [],
+					tooltip: 'Enable XLISP break on Lisp error'
+                }, vscode.workspace.getConfiguration('nyquist').get('lispBreakEnable') ? 'Enabled' : 'Disabled'),
+				new NyquistItem('Garbage Collection', {
+                    command: 'nyquist.toggleGcFlag',
+                    title: 'Toggle Garbage Collection On/Off',
+                    arguments: [],
+					tooltip: 'Print info about garbage collection'
+                }, vscode.workspace.getConfiguration('nyquist').get('gcFlag') ? 'Enabled' : 'Disabled'),
+				
                 new NyquistItem('Sample Rate', {
                     command: 'nyquist.setSampleRate',
                     title: 'Set Sample Rate',
@@ -429,4 +544,113 @@ class NyquistItem extends vscode.TreeItem {
         this.tooltip = `${this.label} - ${this.description}`;
         this.description = description;
     }
+}
+
+function setNyquistPreferences() {
+	// get all the preferences
+	const salMode = vscode.workspace.getConfiguration('nyquist').get('salMode') as boolean;
+	const soundOn = vscode.workspace.getConfiguration('nyquist').get('soundOn') as boolean;
+	const autoNorm = vscode.workspace.getConfiguration('nyquist').get('autoNorm') as boolean;
+	const salTracable = vscode.workspace.getConfiguration('nyquist').get('salTracable') as boolean;
+	const lispTracable = vscode.workspace.getConfiguration('nyquist').get('lispTracable') as boolean;
+	const salBreakEnable = vscode.workspace.getConfiguration('nyquist').get('salBreakEnable') as boolean;
+	const lispBreakEnable = vscode.workspace.getConfiguration('nyquist').get('lispBreakEnable') as boolean;
+	const gcFlag = vscode.workspace.getConfiguration('nyquist').get('gcFlag') as boolean;
+	const sampleRate = vscode.workspace.getConfiguration('nyquist').get('sampleRate');
+	const controlRate = vscode.workspace.getConfiguration('nyquist').get('controlRate');
+	const nyquistDir = vscode.workspace.getConfiguration('nyquist').get('nyquistDir');
+	// map true/false to t/nil
+
+	console.log(salMode);
+	console.log(soundOn);
+	console.log(autoNorm);
+	console.log(salTracable);
+	console.log(lispTracable);
+	console.log(salBreakEnable);
+	console.log(lispBreakEnable);
+	console.log(gcFlag);
+	console.log(sampleRate);
+	console.log(controlRate);
+	console.log(nyquistDir);
+
+	try {
+		// Send the selected text to the terminal
+		const pipePath = '/tmp/control_editor_pipe';
+		// check if the pipe exists, if not wait for it to be created
+		function waitForPipe() {
+            fs.access(pipePath, fs.constants.F_OK, (err) => {
+                if (err) {
+                    // Pipe does not exist
+                    console.log("Waiting for the pipe to be created...");
+					vscode.window.showInformationMessage('Waiting for the pipe to be created...');
+                    setTimeout(waitForPipe, 1000); // Check again in one second
+
+					// check the last line of the pipe
+					fs.readFile(pipePath, 'utf8', (err, data) => {
+						if (err) {
+							console.error(err);
+							return;
+						}
+						const lines = data.trim().split('\n');
+						const lastLine = lines.slice(-1)[0];
+						if (lastLine === 'NIL') {
+							vscode.window.showErrorMessage('Failed to enter SAL mode');
+						} else if (lastLine === 'Entering SAL mode ...') {
+							vscode.window.showInformationMessage('Entered SAL mode');
+						}
+					}
+					);
+
+                } else {
+                    // Pipe exists
+                    vscode.window.showInformationMessage('Pipe is now available!');
+					// string to write to the pipe
+					let content = '';
+					content += "(progn\n";
+					content += `(setf *sal-compiler-debug* ${boolToLisp(salMode)})\n`;
+					content += `(sound-${soundOn ? 'on' : 'off'})\n`;
+					content += `(autonorm-${autoNorm ? 'on' : 'off'})\n`;
+					content += `(sal-tracenable ${boolToLisp(salTracable)})\n`;
+					content += `(sal-breakenable ${boolToLisp(salBreakEnable)})\n`;
+					content += `(xlisp-breakenable ${boolToLisp(lispBreakEnable)})\n`;
+					content += `(xlisp-tracenable ${boolToLisp(lispTracable)})\n`;
+					content += `(setf *gc-flag* ${boolToLisp(gcFlag)})\n`;
+					content += `(set-sound-srate ${sampleRate})\n`;
+					content += `(set-control-srate ${controlRate})\n`;
+					content += `(setdir "${nyquistDir}")\n`;
+					content += `;; end preference data transfer\n`;
+					content += ")\n";
+					// wait writing to the pipe
+					writeToPipe(content);
+					// timeout before setting salConfig to true
+					setTimeout(() => {
+						salConfig = true;
+					}, 2000);
+                }
+            });
+        }
+        waitForPipe();
+		
+	} catch (error) {
+		vscode.window.showErrorMessage('An error occurred while sending the selected text to the pipe');
+	}
+}
+
+function boolToLisp(booleanValue: boolean) {
+    return booleanValue ? 't' : 'nil';
+}
+
+function writeToPipe(content: string) {
+	const pipePath = '/tmp/control_editor_pipe';
+	fs.open(pipePath, 'a', (err, fd) => {
+		if (!err) {
+			fs.writeFileSync(fd, content + '\n');
+			fs.close(fd, (err) => {
+				if (err) {
+					vscode.window.showErrorMessage('Failed to close pipe');
+				}
+			});
+		}
+	}
+	);
 }
