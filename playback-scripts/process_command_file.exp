@@ -38,6 +38,14 @@ set PIPE_FILE "/tmp/control_editor_pipe"
 
 set input ""
 
+set userName [exec whoami]
+
+# Construct the file paths
+set pointsFile "/tmp/${userName}-points.dat"
+set wavFile "/tmp/${userName}-temp.wav"
+
+# Get the user's current active directory
+set currentDir [pwd]
 
 if {[file exists $PIPE_FILE]} {
     spawn /Applications/NyquistIDE.app/Contents/Java/ny
@@ -61,7 +69,35 @@ if {[file exists $PIPE_FILE]} {
         # flush stdout
         log_user 1
         expect -exact "SAL> "
+
+        set currentDate [clock format [clock seconds] -format "%m-%d-%Y"]
+        set currentTime [clock format [clock seconds] -format "%H:%M:%S"]
+
+        # Check if points.dat file exists and move it if it does
+        if {[file exists $pointsFile]} {
+            # append currentDir "${pointsFile}"
+            # Check if points.dat file exists and move it if it does
+            set destinationDir "${currentDir}/res/plot"
+            if {![file exists $destinationDir]} {
+                file mkdir $destinationDir
+            }
+            set newPointsFile "${destinationDir}/points_${currentDate}_${currentTime}.dat"
+            file rename -force $pointsFile $newPointsFile
+        }
+
+        # Check if temp.wav file exists and move it if it does
+        if {[file exists $wavFile]} {
+            # append currentDir "${wavFile}"
+            # Check if points.dat file exists and move it if it does
+            set destinationDir "${currentDir}/res/audio"
+            if {![file exists $destinationDir]} {
+                file mkdir $destinationDir
+            }
+            set newAudioFile "${destinationDir}/audio_${currentDate}_${currentTime}.dat"
+            file rename -force $wavFile $newAudioFile
+        }
         set input ""
+        
     }
     
     # Close the pipe

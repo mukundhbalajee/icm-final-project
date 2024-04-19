@@ -7,11 +7,34 @@ import * as fs from 'fs';
 // persistent terminal for SAL commands
 let salTerminal: vscode.Terminal | undefined = undefined;
 let salConfig: boolean = false;
+let showGraph: boolean = false;
 let rePlayFile: string = '';
 const path = require('path'); // Require the path module
 const os = require('os');
 const extensionId = 'sukumo28.wav-preview';
 
+function getCurrentTime() {
+	let date = new Date();
+	return `${date.getFullYear()}-${date.getMonth()+1}-${date.getDate()}_${date.getHours()}-${date.getMinutes()}-${date.getSeconds()}`;
+}
+
+function checkIfFileExists(filePath: string, fileExtension: string) {
+	return fs.readdirSync(filePath).some(file => file.endsWith(fileExtension));
+}
+
+function getMostRecentFileName(directory: string, fileExtension: string) {
+	// Construct the file path
+	const files = fs.readdirSync(directory);
+	const resFiles = files.filter(file => file.endsWith(fileExtension));
+	
+	// Sort the files by creation time in descending order
+	resFiles.sort((a, b) => {
+		const aCreationTime = fs.statSync(path.join(directory, a)).birthtime;
+		const bCreationTime = fs.statSync(path.join(directory, b)).birthtime;
+		return bCreationTime.getTime() - aCreationTime.getTime();
+	});
+	return resFiles[0];
+}
 
 // This method is called when your extension is activated
 // Your extension is activated the very first time the command is executed
@@ -22,14 +45,17 @@ export function activate(context: vscode.ExtensionContext) {
 
 	vscode.window.onDidChangeActiveTextEditor(editor => {
 		if (editor) {
-			const languageId = editor.document.languageId;
-			console.log(`The user is now editing a file of type: ${languageId}`);
+			const currDocument = editor.document;
+			console.log(`The user is now editing a file of type: ${currDocument.languageId}`);
 			// You can perform additional actions based on the file type here
 
-			if (languageId === 'sal') {
+			if (currDocument.languageId === 'sal') {
 				configSalTerminal(context.extensionPath);
 			}
-
+			// if (currDocument.languageId === 'plaintext' && currDocument.fileName.endsWith('.dat')) {
+			// 	vscode.window.showInformationMessage('Plotting selected graph...');
+			// 	vscode.commands.executeCommand('nyquist-sal-extension.plotGraph');
+			// }
 		}
 	}, null, context.subscriptions);
 
@@ -43,22 +69,31 @@ export function activate(context: vscode.ExtensionContext) {
 	let openTextDocumentListener = vscode.workspace.onDidOpenTextDocument(document => {
 		// Check the file type using the languageId or the file extension
 		if (document.languageId === 'sal') {
-			// Perform an action if a JavaScript file is opened
+			// Perform an action if a SAL file is opened
 			configSalTerminal(context.extensionPath);
 		}
+		// if (document.languageId === 'plaintext' && document.fileName.endsWith('.dat')) {
+		// 	vscode.window.showInformationMessage('Plotting selected graph...');
+		// 	vscode.commands.executeCommand('nyquist-sal-extension.plotGraph');
+		// }
 	});
 
 	let createFilesListener = vscode.workspace.onDidCreateFiles(event => {
 		event.files.forEach(uri => {
 			// Here you can check the file extension or other properties
 			if (uri.path.endsWith('.sal')) {
-				// Perform an action if the created file is a JavaScript file
+				// Perform an action if the created file is a SAL file
 				configSalTerminal(context.extensionPath);
 			}
+			// if (uri.path.endsWith('.dat')) {
+			// 	// Perform an action if the created file is a dat file
+			// 	vscode.window.showInformationMessage('Plotting selected graph...');
+			// 	vscode.commands.executeCommand('nyquist-sal-extension.plotGraph');
+			// }
 		});
 	});
 
-	let runFile = vscode.commands.registerCommand('code-symphony.runFile', () => {
+	let runFile = vscode.commands.registerCommand('nyquist-sal-extension.runFile', () => {
 		const activeTextEditor = vscode.window.activeTextEditor;
 		if (activeTextEditor) {
 			// Check if the active file is a SAL file
@@ -99,7 +134,7 @@ export function activate(context: vscode.ExtensionContext) {
 	});
 
 	// execute the highlighted code
-	let runSelection = vscode.commands.registerCommand('code-symphony.runSelection', () => {
+	let runSelection = vscode.commands.registerCommand('nyquist-sal-extension.runSelection', () => {
 		const activeTextEditor = vscode.window.activeTextEditor;
 		if (activeTextEditor) {
 			// Check if the active file is a SAL file
@@ -114,7 +149,6 @@ export function activate(context: vscode.ExtensionContext) {
 
 				const selection = activeTextEditor.selection;
 				const selectedText = activeTextEditor.document.getText(selection);
-				console.log(selectedText);
 				try {
 					// Send the selected text to the terminal
 					const pipePath = '/tmp/control_editor_pipe';
@@ -141,13 +175,8 @@ export function activate(context: vscode.ExtensionContext) {
 	});
 
 
-	// code-symphony.replay
-	let replay = vscode.commands.registerCommand('code-symphony.replay', function () {
-		let status = copyWavFile();
-		if (!status) {
-			return;
-		}
-
+	// TODO: Need to fix!!!!
+	let replay = vscode.commands.registerCommand('nyquist-sal-extension.replay', function () {
 		// TODO: multiple workspaces
 		const workspaceDir = getWorkspaceDirectory();
 		if (!workspaceDir) {
@@ -208,7 +237,7 @@ export function activate(context: vscode.ExtensionContext) {
 
 	});
 
-	let replay2 = vscode.commands.registerCommand('code-symphony.replay2', function () {
+	let replay2 = vscode.commands.registerCommand('nyquist-sal-extension.replay2', function () {
 		// Get the extension
 		const extension = vscode.extensions.getExtension(extensionId);
 		// console.log"???");
@@ -235,13 +264,271 @@ export function activate(context: vscode.ExtensionContext) {
 		}
 	});
 
+	let plotGraphs = vscode.commands.registerCommand("nyquist-sal-extension.plotGraph", function () {
+		if (!vscode.window.activeTextEditor) {
+			return;
+		}
+
+		// Get all files in the 'res/plot/' directory
+		const plotDir = `${getWorkspaceDirectory()}/res/plot/`;
+
+		// Check if the directory exists recursively
+		if (!fs.existsSync(plotDir)) {
+			fs.mkdirSync(plotDir, { recursive: true });
+		}
+
+		// Check if the file exists
+		if (checkIfFileExists(plotDir, ".dat") === false) {
+			vscode.window.showInformationMessage('No graph to plot!');
+			return;
+		}
+
+		// Create and show a new webview
+		const panel = vscode.window.createWebviewPanel(
+			"sal-plotGraphs", "Viewing file", vscode.ViewColumn.Beside, {
+				enableScripts: true,
+				enableCommandUris: true,
+				retainContextWhenHidden: true
+			}
+		);
+		
+		const currFileName = getMostRecentFileName(plotDir, ".dat");
+		const filePath = path.join(plotDir, currFileName);
+
+		// Check if the directory exists
+		if (!fs.existsSync(plotDir)) {
+			vscode.window.showErrorMessage('Directory does not exist');
+			return;
+		}
+
+		// Check if the file exists
+		if (!fs.existsSync(filePath)) {
+			vscode.window.showErrorMessage('File does not exist');
+			return;
+		}
+
+		const fileContent = fs.readFileSync(filePath, 'utf-8');
+
+		// Get the file names in the directory
+		let workspaceFolder = vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders[0] && vscode.workspace.workspaceFolders[0].uri.fsPath;
+		var checkboxesHtml = '';
+		if (!workspaceFolder) {
+			vscode.window.showErrorMessage('No workspace found');
+		}
+		else {
+			let fileNames = fs.readdirSync(path.join(workspaceFolder, 'res', 'plot'));
+
+			// Filter out non-file entities
+			fileNames = fileNames.filter(fileName => fs.statSync(path.join(workspaceFolder, 'res', 'plot', fileName)).isFile());
+			// Create a string of <option> elements
+			//options = fileNames.map(fileName => `<option value="${fileName}">${fileName}</option>`).join('');
+			// New code to create a checkbox for each file
+			checkboxesHtml = fileNames.map(fileName => {
+				const isChecked = fileName === currFileName ? 'checked' : '';
+				return `<label><input type="checkbox" name="fileCheckbox" value="${fileName}" onchange="updateData()" ${isChecked}>${fileName}</label><br>`;
+			}).join('');
+		}
+
+		// Parse the file content and extract the months and data
+		const lines = fileContent.split('\n');
+		const time: string = lines.map((line: string) => line.split(' ')[0]).join(', ');
+		const value: string = lines.map((line: string) => line.split(' ')[1]).join(', ');
+
+		// Setup message listener from the webview
+		panel.webview.onDidReceiveMessage(
+			message => {
+				switch (message.command) {
+					case 'getFileData':
+						// Read each selected file
+						const datasets = message.filename.map((filename: string) => {
+							const filePath = path.join(workspaceFolder, 'res', 'plot', filename);
+							const fileContent = fs.readFileSync(filePath, 'utf8');
+							const lines = fileContent.split('\n');
+							const timeData = lines.map(line => line.split(' ')[0]);
+							const valueData = lines.map(line => line.split(' ')[1]);
+							return {
+								filename: filename,
+								time: timeData,
+								value: valueData
+							};
+						});
+
+						// Send the datasets back to the webview
+						panel.webview.postMessage({ command: 'updateChart', datasets: datasets });
+						break;
+				}
+			},
+			undefined,
+			context.subscriptions
+		);
+
+		panel.webview.html = `
+			<!DOCTYPE html>
+			<html>
+			<head>
+				<title>Nyquist Graphs!</title>
+				<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+				<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@1.0.1"></script>
+			</head>
+			<body>
+				<h1>Your plot!</h1>
+				<button onclick="toggleDropdown()" class="dropbtn">Select Files</button>
+				<div id="fileCheckboxes">
+					${checkboxesHtml}
+				</div>
+				<button onclick="resetZoom()">Reset Zoom</button>
+
+				<div style="padding: 20px; background-color: rgb(173, 173, 173);">
+					<canvas id="userPlot"></canvas>
+				</div>
+
+				<script>
+					const vscode = acquireVsCodeApi();
+					// Function to send a message to the extension to request file data
+					function updateData() {
+						// Get all checked checkboxes
+						const selectedFiles = Array.from(document.querySelectorAll('input[name="fileCheckbox"]:checked')).map(checkbox => checkbox.value);
+						// Send filenames to the extension
+						vscode.postMessage({
+						command: 'getFileData',
+						filename: selectedFiles
+						});
+					}
+
+					function generateRandomColor(opacity = 1) {
+						const r = Math.floor(Math.random() * 255);
+						const g = Math.floor(Math.random() * 255);
+						const b = Math.floor(Math.random() * 255);
+						return "rgba(" + r + ", " + g + ", " + b + ", " + opacity + ")";
+					}
+
+					// This function will be called when the user clicks the 'Reset Zoom' button
+					function resetZoom() {
+						if (userPlot) {
+							userPlot.resetZoom();
+						}
+					}
+
+					// Get the canvas element
+					var ctx = document.getElementById('userPlot').getContext('2d');
+
+					// Define the data for the chart
+					var data = {
+						labels: [${time}],
+						datasets: [{
+							label: "${currFileName}",
+							data: [${value}],
+							borderColor: 'rgb(255, 99, 132)',
+							backgroundColor: 'rgba(255, 99, 132, 0.2)'
+						}]
+					};
+					
+					var displayedXlabels = {};
+					var displayedYlabels = {};
+					// Create the chart
+					var userPlot = new Chart(ctx, {
+						type: 'line',
+						data: data,
+						options: {
+							// This hook is called before the chart is updated
+							beforeUpdate: function(chart) {
+								chart.displayedXLabels = {};
+								chart.displayedYLabels = {};
+							},
+							plugins: {
+								zoom: {
+									// pan: {
+									// 	enabled: true,
+									// 	mode: 'x',
+									// 	// Set your desired panning options here
+									// },
+									zoom: {
+										drag: {
+											enabled: true,
+											mode: 'x' 
+										},
+										mode: 'x',
+									},
+								}
+							},
+							scales: {
+								x: {
+									type: 'linear',
+									ticks: {
+										stepSize: 0.5
+									}
+									// min: 0,
+									// max: Math.ceil(Math.max(...data.labels))
+								},
+								y:{
+									type: 'linear',
+								},
+							}
+						}
+					});
+
+					// Handler for the message sent from the extension with the file data
+					window.addEventListener('message', event => {
+						const message = event.data; // The JSON data our extension sent
+						switch (message.command) {
+							case 'updateChart':
+								// Clear existing datasets
+								userPlot.data.datasets = [];
+
+								// Add each dataset to the chart
+								message.datasets.forEach(dataset => {
+									userPlot.data.labels = dataset.time; // Assumes all datasets have the same x-axis labels
+									userPlot.data.datasets.push({
+										label: dataset.filename,
+										data: dataset.value,
+										borderColor: generateRandomColor(), // You need to define this function
+										backgroundColor: generateRandomColor(0.2), // Adjust opacity for background
+									});
+								});
+								userPlot.update();
+								break;
+						}
+					});
+				</script>
+			</body>
+			</html>
+		`;
+
+		panel.onDidDispose(() => {
+			panel?.dispose();
+		});
+		
+		panel.reveal(undefined, true);
+	});
+
+	// Watch the 'res/plot/' directory for changes
+	if (vscode.workspace.workspaceFolders) {
+		const plotDir = path.join(vscode.workspace.workspaceFolders[0].uri.fsPath, 'res/plot/');
+		const soundDir = path.join(vscode.workspace.workspaceFolders[0].uri.fsPath, 'res/audio/');
+		
+		// Check if the directory exists
+		if (!fs.existsSync(plotDir)) {
+			// If the directory does not exist, create it
+			fs.mkdirSync(plotDir, { recursive: true });
+		}
+
+		// Check if the directory exists
+		if (!fs.existsSync(soundDir)) {
+			// If the directory does not exist, create it
+			fs.mkdirSync(soundDir, { recursive: true });
+		}
+		fs.watch(plotDir, (eventType: string, filename: string | null) => {
+			showGraph = fs.readdirSync(plotDir).some(file => file.endsWith('.dat'));
+		});
+	}
+
 	context.subscriptions.push(runFile);
 	context.subscriptions.push(runSelection);
 	context.subscriptions.push(replay);
 	context.subscriptions.push(replay2);
 	context.subscriptions.push(openTextDocumentListener);
 	context.subscriptions.push(createFilesListener);
-
+	context.subscriptions.push(plotGraphs);
 	const nyquistProvider = new NyquistTreeDataProvider();
 	const nyquistView = vscode.window.createTreeView('nyquistView', {
         treeDataProvider: nyquistProvider
@@ -379,11 +666,13 @@ function configSalTerminal(extensionPath: string) {
 	}
 	if (!salConfig) {
 		let workspaceFolder = vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders[0] && vscode.workspace.workspaceFolders[0].uri.fsPath;
+		if (!workspaceFolder) {
+			vscode.window.showErrorMessage('No workspace found');
+			return;
+		}
 
 		// Change to the current directory directory
 		let scriptDirectory = path.dirname(__dirname);
-		// vscode.window.showInformationMessage(`Script directory: ${scriptDirectory}`);
-
 		salTerminal.sendText(`cd  "${workspaceFolder}"`);
 		salTerminal.sendText(`clear`);
 		salTerminal.sendText(`bash "${scriptDirectory}/playback-scripts/create_session.sh"`);

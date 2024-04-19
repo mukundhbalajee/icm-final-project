@@ -25,7 +25,45 @@ get_xlisp_path() {
     # Ask the user for the path and save it to the file
     echo "Please enter the XLISPPATH (format: /path/to/nyquist):"
     read -p "Your path: " -r userPath
-    echo "$userPath/nyquist/runtime:$userPath/nyquist/lib" > "$PATH_FILE"
+    # Check if the nyquist folder exists in the path
+    if [[ -d "$userPath/nyquist" ]]; then
+        XLISPPATH="$userPath/nyquist/runtime:$userPath/nyquist/lib"
+        update_config "USER_NYQUIST_FILE_PATH" "$XLISPPATH"
+        echo "Exporting XLISPPATH..."
+        export XLISPPATH="$XLISPPATH"
+    else
+        echo "Invalid path. The nyquist folder does not exist in the specified path."
+        get_xlisp_path
+    fi
+}
+
+# Function to update or add a variable in the config file
+update_config() {
+    local VAR_NAME=$1
+    local VAR_VALUE="$2"
+
+    # Check if the variable already exists in the file
+    if grep -q "^${VAR_NAME}=" "$PATH_FILE"; then
+        # Variable exists, update its value
+        sed -i "" "s|^${VAR_NAME}=.*$|${VAR_NAME}=\"${VAR_VALUE}\"|" "$PATH_FILE"
+    else
+        # Variable does not exist, add it
+        echo "${VAR_NAME}=\"${VAR_VALUE}\"" >> "$PATH_FILE"
+    fi
+}
+
+# Function to set the preferences by dumping the sal commands in 
+# the preferences file to a named pipe
+set_preferences() {
+    echo "Setting preferences..."
+    # Check if the named pipe exists, wait for it to be created if it doesn't
+    PREF_PIPE_FILE="$dir_path/.preferences.lsp"
+    while [[ ! -e "$PREF_PIPE_FILE" ]]; do
+        sleep 1
+    done
+    # Copy contents in preferences file to named pipe
+    cat "$PREF_PIPE_FILE" > "$PIPE_FILE"
+    rm -f "$PREF_PIPE_FILE"
 }
 
 # Function to set the preferences by dumping the sal commands in 
@@ -44,20 +82,19 @@ set_preferences() {
 
 # Path to the file where the XLISPPATH will be saved
 dir_path="$(realpath "$(dirname "$0")")"
-PATH_FILE="$dir_path/.xlisppath"
+PATH_FILE="$dir_path/config.cfg"
 XLISPPATH=""
 PIPE_FILE=/tmp/control_editor_pipe
 
 # Check if the path file exists
 if [[ -f "$PATH_FILE" ]]; then
-    # Read the path from the file and set the XLISPPATH variable
-    XLISPPATH=$(cat "$PATH_FILE")
-    echo $XLISPPATH
-    read -p "Is this the correct path? (yes/y/no/n) " -r input
-    input=$(echo "$input" | tr '[:upper:]' '[:lower:')
-    if [[ "$input" == "yes" || "$input" == "y" ]]; then
-       export XLISPPATH="$XLISPPATH"
-    else
+    source "$PATH_FILE"
+
+    # Check if USER_NYQUIST_FILE_PATH is unset or empty
+    if [ -z "$USER_NYQUIST_FILE_PATH" ]; then
+        echo "USER_NYQUIST_FILE_PATH is not set. Please enter a file to your nyquist folder to proceed."
+
+        echo "Creating Pipe..."
         if [[ ! -p "$PIPE_FILE" ]]; then
             echo "Waiting for pipe to be created..."
             while [[ ! -p "$PIPE_FILE" ]]; do
@@ -65,21 +102,40 @@ if [[ -f "$PATH_FILE" ]]; then
             done
         fi
 
-        echo "XLISPPATH_reset" > "$PIPE_FILE"
         get_xlisp_path
-        XLISPPATH=$(cat "$PATH_FILE")
-        export XLISPPATH="$XLISPPATH"
+        echo XLISPPATH set to "$XLISPPATH"
         echo "Exported XLISPPATH" > "$PIPE_FILE"
-        set_preferences
-    fi
-else
-    echo "File not found. Setting XLISPPATH..."
-    get_xlisp_path
-    set_preferences
-fi
+    else
+        # Read the path from the file and set the XLISPPATH variable
+        echo $USER_NYQUIST_FILE_PATH
+        nyquist_folder="${USER_NYQUIST_FILE_PATH%%:*}"
+        if [[ ! -d "$(dirname "$nyquist_folder")" ]]; then
+            echo "The nyquist folder does not exist in the specified path."
+            get_xlisp_path
+            echo "Exported XLISPPATH" > "$PIPE_FILE"
+        else
+            read -p "Is this the correct path? (yes/y/no/n) " -r input
+            input=$(echo "$input" | tr '[:upper:]' '[:lower:]')
+            if [[ "$input" == "yes" || "$input" == "y" ]]; then
+                export XLISPPATH="$USER_NYQUIST_FILE_PATH"
+                echo XLISPPATH set to "$XLISPPATH"
+            else
+                echo "Issue with nyquist path. Reset your Nyquist folder path..."
 
-# Confirm the XLISPPATH is set
-XLISPPATH=$(cat "$PATH_FILE")
-echo "XLISPPATH is set to: "$XLISPPATH""
+                if [[ ! -p "$PIPE_FILE" ]]; then
+                    echo "Waiting for pipe to be created..."
+                    while [[ ! -p "$PIPE_FILE" ]]; do
+                        sleep 1
+                    done
+                fi
+
+                get_xlisp_path
+            fi
+            echo "Exported XLISPPATH" > "$PIPE_FILE"
+        fi
+    fi
+fi
+set_preferences
+
 clear
 exit

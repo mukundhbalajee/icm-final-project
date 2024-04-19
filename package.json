@@ -1,7 +1,7 @@
 {
-  "name": "code-symphony",
+  "name": "nyquist-sal-extension",
   "publisher": "icm",
-  "displayName": "code-symphony",
+  "displayName": "nyquist-sal-extension",
   "description": "vscode extension for SAL",
   "version": "0.0.1",
   "engines": {
@@ -12,54 +12,61 @@
   ],
   "activationEvents": [
     "onLanguage:sal",
+    "onCommand:code-symphone.plotGraph",
+    "onCommand:sal-graph.commands.refresh",
     "onView:nyquistView"
   ],
   "main": "./out/extension.js",
   "contributes": {
     "commands": [
       {
-        "command": "code-symphony.helloWorld",
+        "command": "nyquist-sal-extension.helloWorld",
         "title": "Hello World VSCode",
         "category": "test"
       },
       {
-        "command": "code-symphony.launchTerminal",
+        "command": "nyquist-sal-extension.launchTerminal",
         "title": "Launch Terminal",
         "category": "test"
       },
       {
-        "command": "code-symphony.openInBrowser",
+        "command": "nyquist-sal-extension.openInBrowser",
         "title": "Open in Browser",
         "category": "test"
       },
       {
-        "command": "code-symphony.createPanel",
+        "command": "nyquist-sal-extension.createPanel",
         "title": "Create Panel",
         "category": "test"
       },
       {
-        "command": "code-symphony.createTextable",
+        "command": "nyquist-sal-extension.createTextable",
         "title": "Create Textable",
         "category": "test"
       },
       {
-        "command": "code-symphony.runFile",
+        "command": "nyquist-sal-extension.runFile",
         "title": "Run File",
         "icon": "$(debug-start)"
       },
       {
-        "command": "code-symphony.replay",
+        "command": "nyquist-sal-extension.replay",
         "title": "Replay",
         "icon": "$(debug-reverse-continue)"
       },
       {
-        "command": "code-symphony.runSelection",
+        "command": "nyquist-sal-extension.runSelection",
         "title": "Run Selection",
         "category": "shortcuts"
       },
       {
-        "command": "code-symphony.replay2",
+        "command": "nyquist-sal-extension.replay2",
         "title": "Replay2"
+      },
+      {
+        "command": "nyquist-sal-extension.plotGraph",
+        "title": "Open WebView panel to display latest graph",
+        "category": "shortcuts"
       },
       {
         "command": "nyquist.setSampleRate",
@@ -191,33 +198,38 @@
       "editor/title": [
         {
           "when": "resourceLangId == sal",
-          "command": "code-symphony.runFile",
+          "command": "nyquist-sal-extension.runFile",
           "group": "navigation@1"
         },
         {
           "when": "resourceLangId == sal",
-          "command": "code-symphony.replay",
+          "command": "nyquist-sal-extension.replay",
           "group": "navigation@2"
+        },
+        {
+          "when": "resourceLangId == sal",
+          "command": "nyquist-sal-extension.plotGraph",
+          "group": "navigation@3"
         }
       ],
       "editor/title/context": [
         {
-          "command": "code-symphony.runFile"
+          "command": "nyquist-sal-extension.runFile"
         },
         {
-          "command": "code-symphony.replay"
+          "command": "nyquist-sal-extension.replay"
         }
       ]
     },
     "keybindings": [
       {
-        "command": "code-symphony.runSelection",
+        "command": "nyquist-sal-extension.runSelection",
         "key": "ctrl+u",
         "mac": "cmd+u",
         "when": "editorTextFocus"
       },
       {
-        "command": "code-symphony.runFile",
+        "command": "nyquist-sal-extension.runFile",
         "key": "ctrl+k",
         "mac": "cmd+k",
         "when": "editorTextFocus"
@@ -242,5 +254,8 @@
     "@vscode/test-electron": "^2.3.9",
     "eslint": "^8.56.0",
     "typescript": "^5.3.3"
+  },
+  "dependencies": {
+    "chart.js": "^4.4.2"
   }
 }
