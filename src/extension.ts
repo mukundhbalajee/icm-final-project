@@ -309,6 +309,7 @@ export function activate(context: vscode.ExtensionContext) {
             });
             if (result) {
                 await vscode.workspace.getConfiguration('nyquist').update('sampleRate', parseFloat(result), vscode.ConfigurationTarget.Global);
+				writeToPipe(`exec set-sound-srate(${result})`);
 				nyquistProvider.refresh();
             }
         }),
@@ -319,6 +320,7 @@ export function activate(context: vscode.ExtensionContext) {
             });
             if (result) {
                 await vscode.workspace.getConfiguration('nyquist').update('controlRate', parseFloat(result), vscode.ConfigurationTarget.Global);
+				writeToPipe(`exec set-control-srate(${result})`);
 				nyquistProvider.refresh();
             }
         }),
@@ -332,13 +334,19 @@ export function activate(context: vscode.ExtensionContext) {
             });
             if (result && result.length > 0) {
                 await vscode.workspace.getConfiguration('nyquist').update('nyquistDir', result[0].fsPath, vscode.ConfigurationTarget.Global);
+				nyquistProvider.refresh();
+
 				// write the path to ./playback-scripts/.xlisppath
 				const path = result[0].fsPath;
 				const scriptDirectory = context.extensionPath;
 				const xlisppath = `${scriptDirectory}/playback-scripts/.xlisppath`;
-				const storePath = `${xlisppath}/nyquist/runtime:${xlisppath}/nyquist/lib`
-				fs.writeFileSync(storePath, path);
-				nyquistProvider.refresh();
+				const storePath = `${path}/nyquist/runtime:${path}/nyquist/lib`;
+				fs.writeFileSync(xlisppath, storePath);
+				let content = '';
+				content += "(progn\n";
+				content += `(setdir "${path}")\n`;
+				content += ")\n";
+				writeToPipe(`${content}`);
             }
         })
     );
@@ -380,7 +388,7 @@ function configSalTerminal(extensionPath: string) {
 		salTerminal.sendText(`clear`);
 		salTerminal.sendText(`bash "${scriptDirectory}/playback-scripts/create_session.sh"`);
 
-		setNyquistPreferences();
+		setNyquistPreferences(extensionPath);
 	}
 	salTerminal.show();
 }
@@ -546,7 +554,7 @@ class NyquistItem extends vscode.TreeItem {
     }
 }
 
-function setNyquistPreferences() {
+function setNyquistPreferences(extensionPath: string) {
 	// get all the preferences
 	const salMode = vscode.workspace.getConfiguration('nyquist').get('salMode') as boolean;
 	const soundOn = vscode.workspace.getConfiguration('nyquist').get('soundOn') as boolean;
@@ -573,67 +581,41 @@ function setNyquistPreferences() {
 	console.log(controlRate);
 	console.log(nyquistDir);
 
-	try {
-		// Send the selected text to the terminal
-		const pipePath = '/tmp/control_editor_pipe';
-		// check if the pipe exists, if not wait for it to be created
-		function waitForPipe() {
-            fs.access(pipePath, fs.constants.F_OK, (err) => {
-                if (err) {
-                    // Pipe does not exist
-                    console.log("Waiting for the pipe to be created...");
-					vscode.window.showInformationMessage('Waiting for the pipe to be created...');
-                    setTimeout(waitForPipe, 1000); // Check again in one second
+	const preferencePath = `${extensionPath}/playback-scripts/.preferences.lsp`;
+	// write the preferences to the pipe
+	let content = '';
+	content += "(progn\n";
+	content += `(setf *sal-compiler-debug* ${boolToLisp(salMode)})\n`;
+	content += `(sound-${soundOn ? 'on' : 'off'})\n`;
+	content += `(autonorm-${autoNorm ? 'on' : 'off'})\n`;
 
-					// check the last line of the pipe
-					fs.readFile(pipePath, 'utf8', (err, data) => {
-						if (err) {
-							console.error(err);
-							return;
-						}
-						const lines = data.trim().split('\n');
-						const lastLine = lines.slice(-1)[0];
-						if (lastLine === 'NIL') {
-							vscode.window.showErrorMessage('Failed to enter SAL mode');
-						} else if (lastLine === 'Entering SAL mode ...') {
-							vscode.window.showInformationMessage('Entered SAL mode');
-						}
-					}
-					);
+	content += `(sal-tracenable ${boolToLisp(salTracable)})\n`;
+	content += `(sal-breakenable ${boolToLisp(salBreakEnable)})\n`;
+	content += `(xlisp-breakenable ${boolToLisp(lispBreakEnable)})\n`;
+	content += `(xlisp-tracenable ${boolToLisp(lispTracable)})\n`;
+	content += `(setf *gc-flag* ${boolToLisp(gcFlag)})\n`;
+	content += `(set-sound-srate ${sampleRate})\n`;
+	content += `(set-control-srate ${controlRate})\n`;
+	content += `(setdir "${nyquistDir}")\n`;
+	content += ")\n";
+	// wait writing to the pipe
 
-                } else {
-                    // Pipe exists
-                    vscode.window.showInformationMessage('Pipe is now available!');
-					// string to write to the pipe
-					let content = '';
-					content += "(progn\n";
-					content += `(setf *sal-compiler-debug* ${boolToLisp(salMode)})\n`;
-					content += `(sound-${soundOn ? 'on' : 'off'})\n`;
-					content += `(autonorm-${autoNorm ? 'on' : 'off'})\n`;
-					content += `(sal-tracenable ${boolToLisp(salTracable)})\n`;
-					content += `(sal-breakenable ${boolToLisp(salBreakEnable)})\n`;
-					content += `(xlisp-breakenable ${boolToLisp(lispBreakEnable)})\n`;
-					content += `(xlisp-tracenable ${boolToLisp(lispTracable)})\n`;
-					content += `(setf *gc-flag* ${boolToLisp(gcFlag)})\n`;
-					content += `(set-sound-srate ${sampleRate})\n`;
-					content += `(set-control-srate ${controlRate})\n`;
-					content += `(setdir "${nyquistDir}")\n`;
-					content += `;; end preference data transfer\n`;
-					content += ")\n";
-					// wait writing to the pipe
-					writeToPipe(content);
-					// timeout before setting salConfig to true
-					setTimeout(() => {
-						salConfig = true;
-					}, 2000);
-                }
-            });
-        }
-        waitForPipe();
-		
-	} catch (error) {
-		vscode.window.showErrorMessage('An error occurred while sending the selected text to the pipe');
+	fs.open(preferencePath, 'w', (err, fd) => {
+		if (!err) {
+			fs.writeFileSync(fd, content + '\n');
+			fs.close(fd, (err) => {
+				if (err) {
+					vscode.window.showErrorMessage('Failed to close pipe');
+				}
+			});
+		}
 	}
+	);
+	
+	setTimeout(() => {
+		salConfig = true;
+	}
+	, 2000);
 }
 
 function boolToLisp(booleanValue: boolean) {

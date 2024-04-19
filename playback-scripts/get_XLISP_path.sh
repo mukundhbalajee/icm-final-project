@@ -28,6 +28,20 @@ get_xlisp_path() {
     echo "$userPath/nyquist/runtime:$userPath/nyquist/lib" > "$PATH_FILE"
 }
 
+# Function to set the preferences by dumping the sal commands in 
+# the preferences file to a named pipe
+set_preferences() {
+    echo "Setting preferences..."
+    # Check if the named pipe exists, wait for it to be created if it doesn't
+    PREF_PIPE_FILE="$dir_path/.preferences.lsp"
+    while [[ ! -e "$PREF_PIPE_FILE" ]]; do
+        sleep 1
+    done
+    # Copy contents in preferences file to named pipe
+    cat "$PREF_PIPE_FILE" > "$PIPE_FILE"
+    rm -f "$PREF_PIPE_FILE"
+}
+
 # Path to the file where the XLISPPATH will be saved
 dir_path="$(realpath "$(dirname "$0")")"
 PATH_FILE="$dir_path/.xlisppath"
@@ -56,10 +70,12 @@ if [[ -f "$PATH_FILE" ]]; then
         XLISPPATH=$(cat "$PATH_FILE")
         export XLISPPATH="$XLISPPATH"
         echo "Exported XLISPPATH" > "$PIPE_FILE"
+        set_preferences
     fi
 else
     echo "File not found. Setting XLISPPATH..."
     get_xlisp_path
+    set_preferences
 fi
 
 # Confirm the XLISPPATH is set
