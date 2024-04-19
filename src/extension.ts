@@ -626,9 +626,9 @@ export function activate(context: vscode.ExtensionContext) {
 				// write the path to ./playback-scripts/.xlisppath
 				const path = result[0].fsPath;
 				const scriptDirectory = context.extensionPath;
-				const xlisppath = `${scriptDirectory}/playback-scripts/.xlisppath`;
-				const storePath = `${path}/nyquist/runtime:${path}/nyquist/lib`;
-				fs.writeFileSync(xlisppath, storePath);
+				const xlisppath = `${scriptDirectory}/playback-scripts/config.cfg`;
+				const storePath = `${path}/runtime:${path}/lib`;
+				fs.writeFileSync(xlisppath, `USER_NYQUIST_FILE_PATH="${storePath}"\n`);
 				let content = '';
 				content += "(progn\n";
 				content += `(setdir "${path}")\n`;
@@ -856,7 +856,6 @@ function setNyquistPreferences(extensionPath: string) {
 	const sampleRate = vscode.workspace.getConfiguration('nyquist').get('sampleRate');
 	const controlRate = vscode.workspace.getConfiguration('nyquist').get('controlRate');
 	const nyquistDir = vscode.workspace.getConfiguration('nyquist').get('nyquistDir');
-	// map true/false to t/nil
 
 	console.log(salMode);
 	console.log(soundOn);
