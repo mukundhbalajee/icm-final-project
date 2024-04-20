@@ -12,10 +12,31 @@ const path = require('path'); // Require the path module
 const os = require('os');
 const extensionId = 'sukumo28.wav-preview';
 
+// Method to handle hovering logic for builtin functions
+function handleHover(word: string) {
+	if (word === "s-read") {
+		return new vscode.Hover({
+			language: "Nyquist",
+			value: "Play the contents of a sound file named by filename. The s-read function is used to read the file, and unless filename specifies an absolute path or starts with “.”, it will be read from *default-sf-dir* ."
+		});
+	}
+}
 
 // This method is called when your extension is activated
 // Your extension is activated the very first time the command is executed
 export function activate(context: vscode.ExtensionContext) {
+	// ----------------- Hovering ----------------- //
+	vscode.languages.registerHoverProvider('sal', {
+        provideHover(document, position, token) {
+
+			const wordPattern = /[-\w]+/;
+
+            const range = document.getWordRangeAtPosition(position, wordPattern);
+            const word = document.getText(range);
+
+			return handleHover(word);
+        }
+    });
 
 	// ----------------- Commands ----------------- //
 	configSalTerminal(context.extensionPath);
