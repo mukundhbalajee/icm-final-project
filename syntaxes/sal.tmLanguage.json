@@ -37,7 +37,7 @@
 				{
 					"comment": "Notes",
 					"name": "variable.other.chords.sal",
-					"match": "\\b[a-gA-G][1-8]\\b"
+					"match": "\\b[a-gA-G](s|S)?[1-8]\\b"
 				},
 				{
 					"comment": "Global",
@@ -84,11 +84,11 @@
 			"patterns": [
 				{
 					"name": "keyword.control.sal",
-					"match": "\\b(while|for|return|set|display|define|function|play|exec|plot|print)\\b"
+					"match": "(?<=^|\\s)(while|for|return|set|display|define|function|play|exec|plot|print|load)(?!\\w|-)"
 				},
 				{
 					"name": "keyword.control.less.sal",
-					"match": "\\b(variable|set|with|if|else|then|loop|finally|begin|end|loop)\\b"
+					"match": "(?<=^|\\s)(variable|set|with|if|else|then|loop|finally|begin|end|loop)(?!\\w|-)"
 				}
 			]
 		},

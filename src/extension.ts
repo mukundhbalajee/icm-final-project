@@ -3,6 +3,7 @@
 import { on } from 'events';
 import * as vscode from 'vscode';
 import * as fs from 'fs';
+import hoverData from './data/hoverData.json';
 
 // persistent terminal for SAL commands
 let salTerminal: vscode.Terminal | undefined = undefined;
@@ -78,9 +79,33 @@ function configSalTerminal(extensionPath: string) {
 	salTerminal.show();
 }
 
+// Method to handle hovering logic for builtin functions
+function handleHover(word: string) {
+	const hoverInfo = (hoverData as any)[word];
+    if (hoverInfo) {
+        const markdownString = new vscode.MarkdownString('', true);
+        markdownString.appendCodeblock(hoverInfo.function, 'sal'); // 'sal' or appropriate language ID
+        markdownString.appendMarkdown(`\n---\n${hoverInfo.description}`);
+
+        return new vscode.Hover(markdownString);
+    }
+    return undefined;
+}
+
 // This method is called when your extension is activated
 // Your extension is activated the very first time the command is executed
 export function activate(context: vscode.ExtensionContext) {
+
+	// ----------------- Hovering ----------------- //
+	context.subscriptions.push(vscode.languages.registerHoverProvider('sal', {
+        provideHover(document, position, token) {
+            const wordPattern = /[\w-]+(?=\()/g;
+            const range = document.getWordRangeAtPosition(position, wordPattern);
+            const word = document.getText(range);
+
+            return handleHover(word);
+        }
+    }));
 
 	// ----------------- Commands ----------------- //
 	configSalTerminal(context.extensionPath);
