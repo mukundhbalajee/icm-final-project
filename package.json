@@ -2,9 +2,14 @@
   "name": "nyquist-sal-extension",
   "displayName": "nyquist-sal-extension",
   "description": "vscode extension for SAL",
+  "publisher": "MukundhBalajee",
   "version": "0.0.1",
   "engines": {
     "vscode": "^1.86.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/mukundhbalajee/icm-final-project.git"
   },
   "categories": [
     "Other"
