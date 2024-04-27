@@ -3,7 +3,7 @@
   "displayName": "nyquist-sal-extension",
   "description": "vscode extension for SAL",
   "publisher": "MukundhBalajee",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "engines": {
     "vscode": "^1.86.0"
   },
