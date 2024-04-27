@@ -34,7 +34,7 @@ jobs:
       npm run test
     displayName: 'Build and Test'
 
-- job: BuildOnUbuntu
+- job: BuildOnMac
   pool:
     vmImage: 'macos-latest'
     
