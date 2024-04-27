@@ -1,16 +1,51 @@
 trigger:
-- CI-pipeline
+- main
 
-pool: mukundh-mbp
+jobs:
+- job: BuildOnUbuntu
+  pool:
+    vmImage: 'ubuntu-latest'
+    
+  steps:
+  - script: |
+      echo Installing dependencies...
+      npm install
+      echo Packaging VSCode extension...
+      npm install -g @vscode/vsce
+      vsce package
+      vsce publish
+      echo Running tests...
+      npm run test
+    displayName: 'Build and Test'
 
-steps:
-- script: |
-    echo Installing dependencies...
-    npm install
-    echo Packaging VSCode extension...
-    npm install -g @vscode/vsce
-    vsce package
-    vsce publish
-    echo Running tests...
-    npm run test
-  displayName: 'Build and Test'
+- job: BuildOnWindows
+  pool:
+    vmImage: 'windows-latest'
+    
+  steps:
+  - script: |
+      echo Installing dependencies...
+      npm install
+      echo Packaging VSCode extension...
+      npm install -g @vscode/vsce
+      vsce package
+      vsce publish
+      echo Running tests...
+      npm run test
+    displayName: 'Build and Test'
+
+- job: BuildOnMac
+  pool:
+    vmImage: 'macos-latest'
+    
+  steps:
+  - script: |
+      echo Installing dependencies...
+      npm install
+      echo Packaging VSCode extension...
+      npm install -g @vscode/vsce
+      vsce package
+      vsce publish
+      echo Running tests...
+      npm run test
+    displayName: 'Build and Test'

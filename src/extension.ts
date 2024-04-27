@@ -3,6 +3,7 @@
 import { on } from 'events';
 import * as vscode from 'vscode';
 import * as fs from 'fs';
+import hoverData from './data/hoverData.json';
 
 // persistent terminal for SAL commands
 let salTerminal: vscode.Terminal | undefined = undefined;
@@ -39,6 +40,17 @@ function getMostRecentFileName(directory: string, fileExtension: string) {
 // This method is called when your extension is activated
 // Your extension is activated the very first time the command is executed
 export function activate(context: vscode.ExtensionContext) {
+
+	// ----------------- Hovering ----------------- //
+	context.subscriptions.push(vscode.languages.registerHoverProvider('sal', {
+        provideHover(document, position, token) {
+            const wordPattern = /[\w-]+(?=\()/g;
+            const range = document.getWordRangeAtPosition(position, wordPattern);
+            const word = document.getText(range);
+
+            return handleHover(word);
+        }
+    }));
 
 	// ----------------- Commands ----------------- //
 	configSalTerminal(context.extensionPath);
