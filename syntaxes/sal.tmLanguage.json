@@ -37,7 +37,7 @@
 				{
 					"comment": "Notes",
 					"name": "variable.other.chords.sal",
-					"match": "\\b[a-gA-G](s|S)?[1-8]\\b"
+					"match": "\\b[a-gA-G](s|S|f|F)?[1-8]\\b"
 				},
 				{
 					"comment": "Global",
@@ -54,7 +54,7 @@
 		"function": {
 			"patterns": [
 			  {
-				"name": "keyword.modifier",
+				"name": "keyword.modifier.sal",
 				"match": "\\b(public|private|static)\\b"
 			  },
 			  {
@@ -66,11 +66,11 @@
 				"match": "\\b([a-zA-Z_-][a-zA-Z0-9_-]*(?=\\:))|((\\:)[a-zA-Z_-][a-zA-Z0-9_-]*)"
 			  },
 			  {
-				"name": "punctuation.definition.parameters.begin",
+				"name": "punctuation.definition.parameters.begin.sal",
 				"match": "\\("
 			  },
 			  {
-				"name": "punctuation.definition.parameters.end",
+				"name": "punctuation.definition.parameters.end.sal",
 				"match": "\\)"
 			  }
 			]
@@ -88,7 +88,7 @@
 				},
 				{
 					"name": "keyword.control.less.sal",
-					"match": "(?<=^|\\s)(variable|set|with|if|else|then|loop|finally|begin|end|loop)(?!\\w|-)"
+					"match": "(?<=^|\\s)(variable|set|by|from|below|with|if|else|then|loop|finally|begin|end|loop)(?!\\w|-)"
 				}
 			]
 		},
@@ -108,7 +108,7 @@
 			"patterns": [
 				{
 					"name": "keyword.operator.common.sal",
-					"match": "(\\s|^)(<|<=|>|>=|=|\\+|\\-|&|\\||@|@@|~|~~|@=|\\*|\\/|\\!|\\+=|\\-=|\\*=|\\/=)(\\s|$)"
+					"match": "(\\s|^)(<|<=|>|>=|=|\\+|\\-|&|\\||@|@@|~|~~|@=|\\*|\\/|\\!|\\+=|\\-=|\\*=|\\/=|\\%)(\\s|$)"
 				}
 			]
 		}
