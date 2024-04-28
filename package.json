@@ -86,13 +86,6 @@
         "title": "Set Nyquist Directory"
       }
     ],
-    "themes": [
-      {
-        "label": "Main color theme",
-        "uiTheme": "vs-dark",
-        "path": "./themes/colors.json"
-      }
-    ],
     "languages": [
       {
         "id": "sal",
