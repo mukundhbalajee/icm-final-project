@@ -37,6 +37,19 @@ function getMostRecentFileName(directory: string, fileExtension: string) {
 	return resFiles[0];
 }
 
+// Method to handle hovering logic for builtin functions
+function handleHover(word: string) {
+	const hoverInfo = (hoverData as any)[word];
+    if (hoverInfo) {
+        const markdownString = new vscode.MarkdownString('', true);
+        markdownString.appendCodeblock(hoverInfo.function, 'sal'); // 'sal' or appropriate language ID
+        markdownString.appendMarkdown(`\n---\n${hoverInfo.description}`);
+
+        return new vscode.Hover(markdownString);
+    }
+    return undefined;
+}
+
 // This method is called when your extension is activated
 // Your extension is activated the very first time the command is executed
 export function activate(context: vscode.ExtensionContext) {
