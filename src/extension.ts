@@ -19,25 +19,6 @@ function getCurrentTime() {
 	return `${date.getFullYear()}-${date.getMonth()+1}-${date.getDate()}_${date.getHours()}-${date.getMinutes()}-${date.getSeconds()}`;
 }
 
-function getCurrentUsername() {
-	return os.userInfo().username;
-}
-
-function getWorkspaceDirectory() {
-	// Get the current workspace folder
-	let workspaceFolder = vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders[0];
-	if (workspaceFolder) {
-		return workspaceFolder.uri.fsPath; // If a workspace is opened, return its path
-	} else if (vscode.window.activeTextEditor) {
-		// If no workspace is opened but a file is active, use its directory
-		const filePath = vscode.window.activeTextEditor.document.uri.fsPath;
-		return path.dirname(filePath);
-	} else {
-		// Handle cases where no workspace is open and no file is active
-		return null;
-	}
-}
-
 function checkIfFileExists(filePath: string, fileExtension: string) {
 	return fs.readdirSync(filePath).some(file => file.endsWith(fileExtension));
 }
@@ -54,29 +35,6 @@ function getMostRecentFileName(directory: string, fileExtension: string) {
 		return bCreationTime.getTime() - aCreationTime.getTime();
 	});
 	return resFiles[0];
-}
-
-function configSalTerminal(extensionPath: string) {
-	if (!salTerminal) {
-		salTerminal = vscode.window.createTerminal('SAL Terminal');
-	}
-	if (!salConfig) {
-		let workspaceFolder = vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders[0] && vscode.workspace.workspaceFolders[0].uri.fsPath;
-		if (!workspaceFolder) {
-			vscode.window.showErrorMessage('No workspace found');
-			return;
-		}
-
-		// Change to the current directory directory
-		let scriptDirectory = path.dirname(__dirname);
-		salTerminal.sendText(`cd  "${workspaceFolder}"`);
-
-		salTerminal.sendText(`clear`);
-		salTerminal.sendText(`bash "${scriptDirectory}/playback-scripts/create_session.sh"`);
-
-		salConfig = true;
-	}
-	salTerminal.show();
 }
 
 // Method to handle hovering logic for builtin functions
@@ -150,7 +108,6 @@ export function activate(context: vscode.ExtensionContext) {
 			// Here you can check the file extension or other properties
 			if (uri.path.endsWith('.sal')) {
 				// Perform an action if the created file is a SAL file
-				vscode.window.showInformationMessage('SAL file created');
 				configSalTerminal(context.extensionPath);
 			}
 			// if (uri.path.endsWith('.dat')) {
@@ -168,6 +125,10 @@ export function activate(context: vscode.ExtensionContext) {
 			if (activeTextEditor.document.languageId === 'sal') {
 				if (!salTerminal) {
 					configSalTerminal(context.extensionPath);
+				}
+				if (!salConfig) {
+					vscode.window.showErrorMessage('SAL configuration not ready. Please try again later.');
+					return;
 				}
 
 				const fileUri = activeTextEditor.document.uri;
@@ -197,28 +158,23 @@ export function activate(context: vscode.ExtensionContext) {
 		}
 	});
 
-	let interactiveSal = vscode.commands.registerCommand('nyquist-sal-extension.interactiveSal', () => {
-		const userInput = vscode.window.showInputBox({
-			placeHolder: "Enter something",
-			prompt: "Please enter your input",
-		});
-		// if (userInput) {
-		// 	vscode.window.showInformationMessage(`User entered: ${userInput}`);
-		// }
-		// message 
-		// vscode.window.showInformationMessage('Hello World VSCode from nyquist-sal-extension!');
-	});
-
 	// execute the highlighted code
 	let runSelection = vscode.commands.registerCommand('nyquist-sal-extension.runSelection', () => {
 		const activeTextEditor = vscode.window.activeTextEditor;
 		if (activeTextEditor) {
 			// Check if the active file is a SAL file
 			if (activeTextEditor.document.languageId === 'sal') {
+				if (!salTerminal) {
+					configSalTerminal(context.extensionPath);
+				}
+				if (!salConfig) {
+					vscode.window.showErrorMessage('SAL configuration not ready. Please try again later.');
+					return;
+				} 
+
 				const selection = activeTextEditor.selection;
 				const selectedText = activeTextEditor.document.getText(selection);
 				try {
-					vscode.window.showInformationMessage(selectedText);
 					// Send the selected text to the terminal
 					const pipePath = '/tmp/control_editor_pipe';
 					fs.open(pipePath, 'a', (err, fd) => {
@@ -592,14 +548,404 @@ export function activate(context: vscode.ExtensionContext) {
 	}
 
 	context.subscriptions.push(runFile);
-	context.subscriptions.push(interactiveSal);
 	context.subscriptions.push(runSelection);
 	context.subscriptions.push(replay);
 	context.subscriptions.push(replay2);
 	context.subscriptions.push(openTextDocumentListener);
 	context.subscriptions.push(createFilesListener);
 	context.subscriptions.push(plotGraphs);
+	const nyquistProvider = new NyquistTreeDataProvider();
+	const nyquistView = vscode.window.createTreeView('nyquistView', {
+        treeDataProvider: nyquistProvider
+    });
+    context.subscriptions.push(nyquistView);
+	context.subscriptions.push(
+		vscode.commands.registerCommand('nyquist.toggleSALMode', async () => {
+			const current = vscode.workspace.getConfiguration('nyquist').get('salMode');
+			await vscode.workspace.getConfiguration('nyquist').update('salMode', true, vscode.ConfigurationTarget.Global);
+			vscode.window.showInformationMessage(`Only support SAL mode: ${!current}`);
+			nyquistProvider.refresh();
+		}),
+		vscode.commands.registerCommand('nyquist.toggleSoundOn', async () => {
+			const current = vscode.workspace.getConfiguration('nyquist').get('soundOn');
+			await vscode.workspace.getConfiguration('nyquist').update('soundOn', !current, vscode.ConfigurationTarget.Global);
+			writeToPipe(`exec sound-${current ? 'off' : 'on'}()`);
+			nyquistProvider.refresh();
+		}
+		),
+		vscode.commands.registerCommand('nyquist.toggleAutoNorm', async () => {
+			const current = vscode.workspace.getConfiguration('nyquist').get('autoNorm');
+			await vscode.workspace.getConfiguration('nyquist').update('autoNorm', !current, vscode.ConfigurationTarget.Global);
+			writeToPipe(`exec autonorm-${current ? 'off' : 'on'}()`);
+			nyquistProvider.refresh();
+		}
+		),
+		vscode.commands.registerCommand('nyquist.toggleSalTracable', async () => {
+			const current = vscode.workspace.getConfiguration('nyquist').get('salTracable');
+			await vscode.workspace.getConfiguration('nyquist').update('salTracable', !current, vscode.ConfigurationTarget.Global);
+			writeToPipe(`exec sal-tracenable(${boolToLisp(!current)})`);
+			nyquistProvider.refresh();
+		}
+		),
+		vscode.commands.registerCommand('nyquist.toggleLispTracable', async () => {
+			const current = vscode.workspace.getConfiguration('nyquist').get('lispTracable');
+			await vscode.workspace.getConfiguration('nyquist').update('lispTracable', !current, vscode.ConfigurationTarget.Global);
+			writeToPipe(`exec xlisp-tracenable(${boolToLisp(!current)})`);
+			nyquistProvider.refresh();
+		}
+		),
+		vscode.commands.registerCommand('nyquist.toggleSalBreakEnable', async () => {
+			const current = vscode.workspace.getConfiguration('nyquist').get('salBreakEnable');
+			await vscode.workspace.getConfiguration('nyquist').update('salBreakEnable', !current, vscode.ConfigurationTarget.Global);
+			writeToPipe(`exec sal-breakenable(${boolToLisp(!current)})`);
+			nyquistProvider.refresh();
+		}
+		),
+		vscode.commands.registerCommand('nyquist.toggleLispBreakEnable', async () => {
+			const current = vscode.workspace.getConfiguration('nyquist').get('lispBreakEnable');
+			await vscode.workspace.getConfiguration('nyquist').update('lispBreakEnable', !current, vscode.ConfigurationTarget.Global);
+			writeToPipe(`exec xlisp-breakenable(${boolToLisp(!current)})`);
+			nyquistProvider.refresh();
+		}
+		),
+		vscode.commands.registerCommand('nyquist.toggleGcFlag', async () => {
+			const current = vscode.workspace.getConfiguration('nyquist').get('gcFlag');
+			await vscode.workspace.getConfiguration('nyquist').update('gcFlag', !current, vscode.ConfigurationTarget.Global);
+			writeToPipe(`set *gc-flag* = ${boolToLisp(!current)}`);
+			nyquistProvider.refresh();
+		}
+		),
+        vscode.commands.registerCommand('nyquist.setSampleRate', async () => {
+            const result = await vscode.window.showInputBox({
+                placeHolder: "Enter the sample rate (Hz)"
+            });
+            if (result) {
+                await vscode.workspace.getConfiguration('nyquist').update('sampleRate', parseFloat(result), vscode.ConfigurationTarget.Global);
+				writeToPipe(`exec set-sound-srate(${result})`);
+				nyquistProvider.refresh();
+            }
+        }),
+
+        vscode.commands.registerCommand('nyquist.setControlRate', async () => {
+            const result = await vscode.window.showInputBox({
+                placeHolder: "Enter the control rate (Hz)"
+            });
+            if (result) {
+                await vscode.workspace.getConfiguration('nyquist').update('controlRate', parseFloat(result), vscode.ConfigurationTarget.Global);
+				writeToPipe(`exec set-control-srate(${result})`);
+				nyquistProvider.refresh();
+            }
+        }),
+
+        vscode.commands.registerCommand('nyquist.setNyquistDir', async () => {
+            const result = await vscode.window.showOpenDialog({
+                canSelectMany: false,
+                canSelectFiles: false,
+                canSelectFolders: true,
+                openLabel: 'Select Folder'
+            });
+            if (result && result.length > 0) {
+                await vscode.workspace.getConfiguration('nyquist').update('nyquistDir', result[0].fsPath, vscode.ConfigurationTarget.Global);
+				nyquistProvider.refresh();
+
+				// write the path to ./playback-scripts/.xlisppath
+				const path = result[0].fsPath;
+				const scriptDirectory = context.extensionPath;
+				const xlisppath = `${scriptDirectory}/playback-scripts/config.cfg`;
+				const storePath = `${path}/runtime:${path}/lib`;
+				fs.writeFileSync(xlisppath, `USER_NYQUIST_FILE_PATH="${storePath}"\n`);
+				let content = '';
+				content += "(progn\n";
+				content += `(setdir "${path}")\n`;
+				content += ")\n";
+				writeToPipe(`${content}`);
+            }
+        })
+    );
+	
 }
 
 // This method is called when your extension is deactivated
-export function deactivate() { }
+export function deactivate() {
+	console.log("Deactivated");
+}
+
+function getWorkspaceDirectory() {
+	// Get the current workspace folder
+	let workspaceFolder = vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders[0];
+	if (workspaceFolder) {
+		return workspaceFolder.uri.fsPath; // If a workspace is opened, return its path
+	} else if (vscode.window.activeTextEditor) {
+		// If no workspace is opened but a file is active, use its directory
+		const filePath = vscode.window.activeTextEditor.document.uri.fsPath;
+		return path.dirname(filePath);
+	} else {
+		// Handle cases where no workspace is open and no file is active
+		return null;
+	}
+}
+
+function configSalTerminal(extensionPath: string) {
+	if (!salTerminal) {
+		salTerminal = vscode.window.createTerminal('SAL Terminal');
+	}
+	if (!salConfig) {
+		let workspaceFolder = vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders[0] && vscode.workspace.workspaceFolders[0].uri.fsPath;
+		if (!workspaceFolder) {
+			vscode.window.showErrorMessage('No workspace found');
+			return;
+		}
+
+		// Change to the current directory directory
+		let scriptDirectory = path.dirname(__dirname);
+		salTerminal.sendText(`cd  "${workspaceFolder}"`);
+		salTerminal.sendText(`clear`);
+		salTerminal.sendText(`bash "${scriptDirectory}/playback-scripts/create_session.sh"`);
+
+		setNyquistPreferences(extensionPath);
+	}
+	salTerminal.show();
+}
+
+function copyWavFile() {
+	const username = getCurrentUsername().toLowerCase();
+	const tempWavPath = `/tmp/${username}-temp.wav`;
+	const workspaceDir = getWorkspaceDirectory();
+	if (!workspaceDir) {
+		vscode.window.showErrorMessage("No workspace or active file found.");
+		return null;
+	}
+	const tmpDirPath = `${workspaceDir}/.tmp`;
+	if (!fs.existsSync(tmpDirPath)) {
+        fs.mkdirSync(tmpDirPath);
+        console.log('The .tmp directory has been created.');
+    }
+
+
+	// iteratively find the current index for the temp_num.wav file
+	let index = 0;
+	let destinationPath = '';
+	while (true) {
+		destinationPath = `${tmpDirPath}/temp_${index}.wav`;
+		try {
+			fs.accessSync(destinationPath, fs.constants.F_OK);
+			index++;
+		}
+		catch (err) {
+			break;
+		}
+	}
+
+	try {
+		// Check if the file exists
+		fs.accessSync(tempWavPath, fs.constants.F_OK);
+
+		// If the file exists, copy it
+		fs.renameSync(tempWavPath, destinationPath);
+		console.log('File moved successfully.');
+
+		rePlayFile = `temp_${index}.wav`;
+		vscode.window.showInformationMessage(`Moved ${tempWavPath} to ${destinationPath}`);
+	} catch (err) {
+		const error = err as NodeJS.ErrnoException;
+		if (error.code === 'ENOENT') {
+			// Handle the case where the file does not exist
+			vscode.window.showErrorMessage(`File not found: ${tempWavPath}`);
+		} else {
+			// Handle other possible errors
+			console.error('Error:', error);
+		}
+		return null;
+	}
+
+	return destinationPath;
+}
+
+function getCurrentUsername() {
+	return os.userInfo().username;
+}
+
+class NyquistTreeDataProvider implements vscode.TreeDataProvider<NyquistItem> {
+    private _onDidChangeTreeData: vscode.EventEmitter<NyquistItem | undefined | null> = new vscode.EventEmitter<NyquistItem | undefined | null>();
+    readonly onDidChangeTreeData: vscode.Event<NyquistItem | undefined | null> = this._onDidChangeTreeData.event;
+
+    constructor() {}
+
+    refresh(): void {
+        this._onDidChangeTreeData.fire(null);
+    }
+
+    getTreeItem(element: NyquistItem): vscode.TreeItem | Thenable<vscode.TreeItem> {
+        return element;
+    }
+
+    getChildren(element?: NyquistItem): vscode.ProviderResult<NyquistItem[]> {
+        if (element) {
+            return element.children;
+        } else {
+            // Root level items
+            return [
+				new NyquistItem('SAL Mode', {
+                    command: 'nyquist.toggleSALMode',
+                    title: 'Toggle SAL Mode',
+                    arguments: [],
+					tooltip: 'Start in SAL mode (not Lisp)'
+                }, vscode.workspace.getConfiguration('nyquist').get('salMode') ? 'Enabled' : 'Disabled'),
+				new NyquistItem('Sound On', {
+                    command: 'nyquist.toggleSoundOn',
+                    title: 'Toggle Sound On/Off',
+                    arguments: [],
+					tooltip: 'Enable sound output in PLAY command'
+                }, vscode.workspace.getConfiguration('nyquist').get('soundOn') ? 'Enabled' : 'Disabled'),
+				new NyquistItem('Auto Norm', {
+                    command: 'nyquist.toggleAutoNorm',
+                    title: 'Toggle Auto Norm On/Off',
+                    arguments: [],
+					tooltip: 'Autonorm'
+                }, vscode.workspace.getConfiguration('nyquist').get('autoNorm') ? 'Enabled' : 'Disabled'),
+				new NyquistItem('SAL Tracable', {
+                    command: 'nyquist.toggleSalTracable',
+                    title: 'Toggle SAL Tracable On/Off',
+                    arguments: [],
+					tooltip: 'Print SAL traceback on SAL error'
+                }, vscode.workspace.getConfiguration('nyquist').get('salTracable') ? 'Enabled' : 'Disabled'),
+				new NyquistItem('LISP Tracable', {
+                    command: 'nyquist.toggleLispTracable',
+                    title: 'Toggle LISP Tracable On/Off',
+                    arguments: [],
+					tooltip: 'Print Lisp traceback on Lisp error'
+                }, vscode.workspace.getConfiguration('nyquist').get('lispTracable') ? 'Enabled' : 'Disabled'),
+				new NyquistItem('SAL BreakEnable', {
+                    command: 'nyquist.toggleSalBreakEnable',
+                    title: 'Toggle SAL BreakEnable On/Off',
+                    arguments: [],
+					tooltip: 'Enable XLISP break on SAL error'
+                }, vscode.workspace.getConfiguration('nyquist').get('salBreakEnable') ? 'Enabled' : 'Disabled'),
+				new NyquistItem('LISP BreakEnable', {
+                    command: 'nyquist.toggleLispBreakEnable',
+                    title: 'Toggle LISP BreakEnable On/Off',
+                    arguments: [],
+					tooltip: 'Enable XLISP break on Lisp error'
+                }, vscode.workspace.getConfiguration('nyquist').get('lispBreakEnable') ? 'Enabled' : 'Disabled'),
+				new NyquistItem('Garbage Collection', {
+                    command: 'nyquist.toggleGcFlag',
+                    title: 'Toggle Garbage Collection On/Off',
+                    arguments: [],
+					tooltip: 'Print info about garbage collection'
+                }, vscode.workspace.getConfiguration('nyquist').get('gcFlag') ? 'Enabled' : 'Disabled'),
+				
+                new NyquistItem('Sample Rate', {
+                    command: 'nyquist.setSampleRate',
+                    title: 'Set Sample Rate',
+                    arguments: []
+                }, `${vscode.workspace.getConfiguration('nyquist').get('sampleRate')} Hz`),
+                new NyquistItem('Control Rate', {
+                    command: 'nyquist.setControlRate',
+                    title: 'Set Control Rate',
+                    arguments: []
+                }, `${vscode.workspace.getConfiguration('nyquist').get('controlRate')} Hz`),
+                new NyquistItem('Nyquist Directory', {
+                    command: 'nyquist.setNyquistDir',
+                    title: 'Set Nyquist Directory',
+                    arguments: []
+                }, `${vscode.workspace.getConfiguration('nyquist').get('nyquistDir')}`)
+            ];
+        }
+    }
+}
+
+class NyquistItem extends vscode.TreeItem {
+    children: NyquistItem[] | undefined;
+
+    constructor(
+        public readonly label: string,
+        public readonly command?: vscode.Command,
+        public readonly description?: string
+    ) {
+        super(label, vscode.TreeItemCollapsibleState.None);
+        this.tooltip = `${this.label} - ${this.description}`;
+        this.description = description;
+    }
+}
+
+function setNyquistPreferences(extensionPath: string) {
+	// get all the preferences
+	const salMode = vscode.workspace.getConfiguration('nyquist').get('salMode') as boolean;
+	const soundOn = vscode.workspace.getConfiguration('nyquist').get('soundOn') as boolean;
+	const autoNorm = vscode.workspace.getConfiguration('nyquist').get('autoNorm') as boolean;
+	const salTracable = vscode.workspace.getConfiguration('nyquist').get('salTracable') as boolean;
+	const lispTracable = vscode.workspace.getConfiguration('nyquist').get('lispTracable') as boolean;
+	const salBreakEnable = vscode.workspace.getConfiguration('nyquist').get('salBreakEnable') as boolean;
+	const lispBreakEnable = vscode.workspace.getConfiguration('nyquist').get('lispBreakEnable') as boolean;
+	const gcFlag = vscode.workspace.getConfiguration('nyquist').get('gcFlag') as boolean;
+	const sampleRate = vscode.workspace.getConfiguration('nyquist').get('sampleRate');
+	const controlRate = vscode.workspace.getConfiguration('nyquist').get('controlRate');
+	const nyquistDir = vscode.workspace.getConfiguration('nyquist').get('nyquistDir');
+
+	console.log(salMode);
+	console.log(soundOn);
+	console.log(autoNorm);
+	console.log(salTracable);
+	console.log(lispTracable);
+	console.log(salBreakEnable);
+	console.log(lispBreakEnable);
+	console.log(gcFlag);
+	console.log(sampleRate);
+	console.log(controlRate);
+	console.log(nyquistDir);
+
+	const preferencePath = `${extensionPath}/playback-scripts/.preferences.lsp`;
+	// write the preferences to the pipe
+	let content = '';
+	content += "(progn\n";
+	content += `(setf *sal-compiler-debug* ${boolToLisp(salMode)})\n`;
+	content += `(sound-${soundOn ? 'on' : 'off'})\n`;
+	content += `(autonorm-${autoNorm ? 'on' : 'off'})\n`;
+
+	content += `(sal-tracenable ${boolToLisp(salTracable)})\n`;
+	content += `(sal-breakenable ${boolToLisp(salBreakEnable)})\n`;
+	content += `(xlisp-breakenable ${boolToLisp(lispBreakEnable)})\n`;
+	content += `(xlisp-tracenable ${boolToLisp(lispTracable)})\n`;
+	content += `(setf *gc-flag* ${boolToLisp(gcFlag)})\n`;
+	content += `(set-sound-srate ${sampleRate})\n`;
+	content += `(set-control-srate ${controlRate})\n`;
+	content += `(setdir "${nyquistDir}")\n`;
+	content += ")\n";
+	// wait writing to the pipe
+
+	fs.open(preferencePath, 'w', (err, fd) => {
+		if (!err) {
+			fs.writeFileSync(fd, content + '\n');
+			fs.close(fd, (err) => {
+				if (err) {
+					vscode.window.showErrorMessage('Failed to close pipe');
+				}
+			});
+		}
+	}
+	);
+	
+	setTimeout(() => {
+		salConfig = true;
+	}
+	, 2000);
+}
+
+function boolToLisp(booleanValue: boolean) {
+    return booleanValue ? 't' : 'nil';
+}
+
+function writeToPipe(content: string) {
+	const pipePath = '/tmp/control_editor_pipe';
+	fs.open(pipePath, 'a', (err, fd) => {
+		if (!err) {
+			fs.writeFileSync(fd, content + '\n');
+			fs.close(fd, (err) => {
+				if (err) {
+					vscode.window.showErrorMessage('Failed to close pipe');
+				}
+			});
+		}
+	}
+	);
+}
