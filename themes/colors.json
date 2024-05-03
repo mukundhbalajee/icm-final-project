@@ -1,94 +1,83 @@
 {
-    "name": "My Custom Theme",
-    "type": "dark",
-    "colors": {
-    },
-    "tokenColors": [
-        {
-            "scope": "comment",
-            "settings": {
-                "foreground": "#608B4E",
-                "fontStyle": "italic"
+    "editor.tokenColorCustomizations": {
+        "textMateRules": [
+            {
+                "scope": "comment",
+                "settings": {
+                    "foreground": "#608B4E",
+                    "fontStyle": "italic"
+                }
+            },
+            {
+                "scope": [
+                    "string.quoted.double.sal",
+                    "string.quoted.single.sal"
+                ],
+                "settings": {
+                    "foreground": "#CE9178"
+                }
+            },
+            {
+                "scope": "variable.other.bool.true.sal",
+                "settings": {
+                    "foreground": "#4b8b8b",
+                    "fontStyle": "italic"
+                }
+            },
+            {
+                "scope": "variable.other.bool.false.sal",
+                "settings": {
+                    "foreground": "#ca4949",
+                    "fontStyle": "italic"
+                }
+            },
+            {
+                "scope": "variable.other.nil.sal",
+                "settings": {
+                    "foreground": "#bd5187",
+                    "fontStyle": "italic"
+                }
+            },
+            {
+                "scope": [
+                    "variable.other.chords.sal",
+                    "constant.numeric.sal",
+                    "variable.global.sal"
+                ],
+                "settings": {
+                    "foreground": "#b45a3c"
+                }
+            },
+            {
+                "scope": "entity.name.function.sal",
+                "settings": {
+                    "foreground": "#7272ca"
+                }
+            },
+            {
+                "scope": "variable.parameter.sal",
+                "settings": {
+                    "foreground": "#bd5187"
+                }
+            },
+            {
+                "scope": "keyword.control.sal",
+                "settings": {
+                    "foreground": "#8464c4"
+                }
+            },
+            {
+                "scope": "keyword.control.less.sal",
+                "settings": {
+                    "foreground": "#5485b6"
+                }
+            },
+            {
+                "scope": "keyword.operator.common.sal",
+                "settings": {
+                    "foreground": "#a06e3b"
+                }
             }
-        },
-        {
-            "scope": [
-                "string.quoted.double",
-                "string.quoted.single"
-            ],
-            "settings": {
-                "foreground": "#CE9178"
-            }
-        },
-        {
-            "scope": "variable.other.bool.true.sal",
-            "settings": {
-                "foreground": "#4b8b8b",
-                "fontStyle": "italic"
-            }
-        },
-        {
-            "scope": "variable.other.bool.false.sal",
-            "settings": {
-                "foreground": "#ca4949",
-                "fontStyle": "italic"
-            }
-        },
-        {
-            "scope": "variable.other.nil.sal",
-            "settings": {
-                "foreground": "#bd5187",
-                "fontStyle": "italic"
-            }
-        },
-        {
-            "scope": [
-                "variable.other.chords.sal",
-                "constant.numeric.sal"
-            ],
-            "settings": {
-                "foreground": "#b45a3c"
-            }
-        },
-        {
-            "scope": [
-                "variable.other.chords.sal",
-                "constant.numeric.sal",
-                "variable.global.sal"
-            ],
-            "settings": {
-                "foreground": "#b45a3c"
-            }
-        },
-        {
-            "scope": "entity.name.function.sal",
-            "settings": {
-                "foreground": "#7272ca"
-            }
-        },
-        {
-            "scope": "variable.parameter.sal",
-            "settings": {
-                "foreground": "#bd5187"
-            }
-        },
-        {
-            "scope": "keyword.control.sal",
-            "settings": {
-                "foreground": "#8464c4"
-            }
-        },
-        {
-            "scope": "keyword.control.less.sal",
-            "settings": {
-                "foreground": "#5485b6"
-            }
-        },
-        {
-            "scope": "keyword.operator.common.sal",
-            "settings": {
-                "foreground": "#a06e3b"
-            }
-        }
-    ]
+        ]
+    }
 }
