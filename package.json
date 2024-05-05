@@ -1,5 +1,6 @@
 {
   "name": "nyquist-sal-extension",
+  "publisher": "icm",
   "displayName": "nyquist-sal-extension",
   "description": "vscode extension for SAL",
   "publisher": "MukundhBalajee",
@@ -17,7 +18,8 @@
   "activationEvents": [
     "onLanguage:sal",
     "onCommand:code-symphone.plotGraph",
-    "onCommand:sal-graph.commands.refresh"
+    "onCommand:sal-graph.commands.refresh",
+    "onView:nyquistView"
   ],
   "main": "./out/extension.js",
   "contributes": {
@@ -58,10 +60,6 @@
         "icon": "$(debug-reverse-continue)"
       },
       {
-        "command": "nyquist-sal-extension.interactiveSal",
-        "title": "Interactive Sal"
-      },
-      {
         "command": "nyquist-sal-extension.runSelection",
         "title": "Run Selection",
         "category": "shortcuts"
@@ -74,13 +72,18 @@
         "command": "nyquist-sal-extension.plotGraph",
         "title": "Open WebView panel to display latest graph",
         "category": "shortcuts"
-      }
-    ],
-    "themes": [
+      },
       {
-        "label": "Main color theme",
-        "uiTheme": "vs-dark",
-        "path": "./themes/colors.json"
+        "command": "nyquist.setSampleRate",
+        "title": "Set Sample Rate"
+      },
+      {
+        "command": "nyquist.setControlRate",
+        "title": "Set Control Rate"
+      },
+      {
+        "command": "nyquist.setNyquistDir",
+        "title": "Set Nyquist Directory"
       }
     ],
     "languages": [
@@ -120,9 +123,74 @@
       "nyquistContainer": [
         {
           "id": "nyquistView",
-          "name": "<Display Name>"
+          "name": "Settings"
         }
       ]
+    },
+    "configuration": {
+      "title": "Nyquist Configuration",
+      "properties": {
+        "nyquist.salMode": {
+          "type": "boolean",
+          "default": true,
+          "description": "Start in SAL mode (not Lisp)"
+        },
+        "nyquist.soundOn": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable sound output in PLAY command"
+        },
+        "nyquist.autoNorm": {
+          "type": "boolean",
+          "default": true,
+          "description": "Autonorm"
+        },
+        "nyquist.salTracable": {
+          "type": "boolean",
+          "default": true,
+          "description": "Print SAL traceback on SAL error"
+        },
+        "nyquist.lispTracable": {
+          "type": "boolean",
+          "default": true,
+          "description": "Print Lisp traceback on Lisp error"
+        },
+        "nyquist.salBreakEnable": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable XLISP break on SAL error"
+        },
+        "nyquist.lispBreakEnable": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable XLISP break on Lisp error"
+        },
+        "nyquist.gcFlag": {
+          "type": "boolean",
+          "default": true,
+          "description": "Print info about garbage collection"
+        },
+        "nyquist.sampleRate": {
+          "type": "number",
+          "default": 44100,
+          "description": "Sound sample rate for Nyquist audio processing"
+        },
+        "nyquist.controlRate": {
+          "type": "number",
+          "default": 4410,
+          "description": "Control rate for Nyquist audio processing"
+        },
+        "nyquist.nyquistDir": {
+          "type": "string",
+          "default": "",
+          "description": "Directory for Nyquist files"
+        },
+        "nyquist.preferAudioDevice": {
+          "type": "string",
+          "default": "",
+          "description": "Preferred audio device name"
+        }
+      }
     },
     "menus": {
       "editor/title": [
@@ -148,12 +216,6 @@
         },
         {
           "command": "nyquist-sal-extension.replay"
-        }
-      ],
-      "view/item/context": [
-        {
-          "command": "nyquist-sal-extension.interactiveSal",
-          "when": "view == nyquistView"
         }
       ]
     },
