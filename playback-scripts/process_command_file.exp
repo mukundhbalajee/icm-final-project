@@ -93,7 +93,7 @@ if {[file exists $PIPE_FILE]} {
             if {![file exists $destinationDir]} {
                 file mkdir $destinationDir
             }
-            set newAudioFile "${destinationDir}/audio_${currentDate}_${currentTime}.dat"
+            set newAudioFile "${destinationDir}/audio_${currentDate}_${currentTime}.wav"
             file rename -force $wavFile $newAudioFile
         }
         set input ""
