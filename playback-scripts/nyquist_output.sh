@@ -38,23 +38,6 @@ echo "Waiting for XLISPPATH to be set..."
 # # It continuously checks if the editor is open and running, and if not, it performs cleanup and exits.
 # # It also checks if the PATH_FILE exists, and if so, it reads the path from the file and sets the XLISPPATH variable.
 # # The script runs in a loop until the XLISPPATH is successfully set.
-# while [[ $XLISPPATH_SET == false ]]; do
-#     # Check is editor is open and running
-#     if ! pgrep -f "control_editor.sh" >/dev/null 2>&1; then
-#         echo "Editor closed..."
-#         cleanup
-#         sleep 2
-#         exit
-#     fi
-#     # Check if USER_NYQUIST_FILE_PATH is non-empty/set
-#     source "$PATH_FILE"
-#     if [ ! -z "$USER_NYQUIST_FILE_PATH" ]; then
-#         echo "Path set..."
-#         export XLISPPATH="$USER_NYQUIST_FILE_PATH"
-#         XLISPPATH_SET=true
-#     fi
-# done
-
 
 # Start the process_command_file.exp
 while true; do

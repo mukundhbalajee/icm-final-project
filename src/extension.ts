@@ -14,9 +14,19 @@ const path = require('path'); // Require the path module
 const os = require('os');
 const extensionId = 'sukumo28.wav-preview';
 
-function getCurrentTime() {
-	let date = new Date();
-	return `${date.getFullYear()}-${date.getMonth()+1}-${date.getDate()}_${date.getHours()}-${date.getMinutes()}-${date.getSeconds()}`;
+function getWorkspaceDirectory() {
+	// Get the current workspace folder
+	let workspaceFolder = vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders[0];
+	if (workspaceFolder) {
+		return workspaceFolder.uri.fsPath; // If a workspace is opened, return its path
+	} else if (vscode.window.activeTextEditor) {
+		// If no workspace is opened but a file is active, use its directory
+		const filePath = vscode.window.activeTextEditor.document.uri.fsPath;
+		return path.dirname(filePath);
+	} else {
+		// Handle cases where no workspace is open and no file is active
+		return null;
+	}
 }
 
 function checkIfFileExists(filePath: string, fileExtension: string) {
@@ -35,6 +45,28 @@ function getMostRecentFileName(directory: string, fileExtension: string) {
 		return bCreationTime.getTime() - aCreationTime.getTime();
 	});
 	return resFiles[0];
+}
+
+function configSalTerminal(extensionPath: string) {
+	if (!salTerminal) {
+		salTerminal = vscode.window.createTerminal('SAL Terminal');
+	}
+	if (!salConfig) {
+		let workspaceFolder = vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders[0] && vscode.workspace.workspaceFolders[0].uri.fsPath;
+		if (!workspaceFolder) {
+			vscode.window.showErrorMessage('No workspace found');
+			return;
+		}
+
+		// Change to the current directory directory
+		let scriptDirectory = path.dirname(__dirname);
+		salTerminal.sendText(`cd  "${workspaceFolder}"`);
+		salTerminal.sendText(`clear`);
+		salTerminal.sendText(`bash "${scriptDirectory}/playback-scripts/create_session.sh"`);
+
+		setNyquistPreferences(extensionPath);
+	}
+	salTerminal.show();
 }
 
 // Method to handle hovering logic for builtin functions
@@ -77,10 +109,6 @@ export function activate(context: vscode.ExtensionContext) {
 			if (currDocument.languageId === 'sal') {
 				configSalTerminal(context.extensionPath);
 			}
-			// if (currDocument.languageId === 'plaintext' && currDocument.fileName.endsWith('.dat')) {
-			// 	vscode.window.showInformationMessage('Plotting selected graph...');
-			// 	vscode.commands.executeCommand('nyquist-sal-extension.plotGraph');
-			// }
 		}
 	}, null, context.subscriptions);
 
@@ -97,10 +125,6 @@ export function activate(context: vscode.ExtensionContext) {
 			// Perform an action if a SAL file is opened
 			configSalTerminal(context.extensionPath);
 		}
-		// if (document.languageId === 'plaintext' && document.fileName.endsWith('.dat')) {
-		// 	vscode.window.showInformationMessage('Plotting selected graph...');
-		// 	vscode.commands.executeCommand('nyquist-sal-extension.plotGraph');
-		// }
 	});
 
 	let createFilesListener = vscode.workspace.onDidCreateFiles(event => {
@@ -110,11 +134,6 @@ export function activate(context: vscode.ExtensionContext) {
 				// Perform an action if the created file is a SAL file
 				configSalTerminal(context.extensionPath);
 			}
-			// if (uri.path.endsWith('.dat')) {
-			// 	// Perform an action if the created file is a dat file
-			// 	vscode.window.showInformationMessage('Plotting selected graph...');
-			// 	vscode.commands.executeCommand('nyquist-sal-extension.plotGraph');
-			// }
 		});
 	});
 
@@ -199,10 +218,7 @@ export function activate(context: vscode.ExtensionContext) {
 		}
 	});
 
-
-	// TODO: Need to fix!!!!
 	let replay = vscode.commands.registerCommand('nyquist-sal-extension.replay', function () {
-		// TODO: multiple workspaces
 		const workspaceDir = getWorkspaceDirectory();
 		if (!workspaceDir) {
 			vscode.window.showErrorMessage("No workspace or active file found.");
@@ -212,7 +228,7 @@ export function activate(context: vscode.ExtensionContext) {
 		// Create and show a new webview
 		const panel = vscode.window.createWebviewPanel(
 			'audioPlayer', // Identifies the type of the webview. Used internally
-			`${rePlayFile}`, // Title of the panel displayed to the user
+			'Replaying Last Created Sound...', // Title of the panel displayed to the user
 			vscode.ViewColumn.Two, // Editor column to show the new webview panel in.
 			{
 				// Enable scripts in the webview
@@ -226,9 +242,17 @@ export function activate(context: vscode.ExtensionContext) {
 			}
 		);
 
+		const workspaceFolders = vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders[0];
+		if (!workspaceFolders) {
+			vscode.window.showErrorMessage('No workspace found');
+			return;
+		}
+
+		const resAudioFolder = path.join(workspaceFolders.uri.fsPath, 'res/audio/');
+		const mostRecentSoundFile = getMostRecentFileName(resAudioFolder, ".wav");
 		// Get path to resource on disk
 		const onDiskPath = vscode.Uri.file(
-			path.join(workspaceDir, ".tmp", rePlayFile)
+			path.join(resAudioFolder, mostRecentSoundFile)
 		);
 
 		// And get the special URI to use with the webview
@@ -249,10 +273,10 @@ export function activate(context: vscode.ExtensionContext) {
 			<head>
 				<meta charset="UTF-8">
 				<meta name="viewport" content="width=device-width, initial-scale=1.0">
-				<title>${rePlayFile}</title>
+				<title>Replaying Last Created Sound...</title>
 			</head>
 			<body>
-				<p>Playing from: ./.tmp/${rePlayFile}</p>
+				<p>Playing ${mostRecentSoundFile}</p>
 				<audio controls autoplay>
 					<source src="${audioSrc}" type="${type}">
 				</audio>
@@ -265,7 +289,6 @@ export function activate(context: vscode.ExtensionContext) {
 	let replay2 = vscode.commands.registerCommand('nyquist-sal-extension.replay2', function () {
 		// Get the extension
 		const extension = vscode.extensions.getExtension(extensionId);
-		// console.log"???");
 
 		if (extension) {
 			if (!extension.isActive) {
@@ -345,8 +368,6 @@ export function activate(context: vscode.ExtensionContext) {
 
 			// Filter out non-file entities
 			fileNames = fileNames.filter(fileName => fs.statSync(path.join(workspaceFolder, 'res', 'plot', fileName)).isFile());
-			// Create a string of <option> elements
-			//options = fileNames.map(fileName => `<option value="${fileName}">${fileName}</option>`).join('');
 			// New code to create a checkbox for each file
 			checkboxesHtml = fileNames.map(fileName => {
 				const isChecked = fileName === currFileName ? 'checked' : '';
@@ -462,11 +483,6 @@ export function activate(context: vscode.ExtensionContext) {
 							},
 							plugins: {
 								zoom: {
-									// pan: {
-									// 	enabled: true,
-									// 	mode: 'x',
-									// 	// Set your desired panning options here
-									// },
 									zoom: {
 										drag: {
 											enabled: true,
@@ -482,8 +498,6 @@ export function activate(context: vscode.ExtensionContext) {
 									ticks: {
 										stepSize: 0.5
 									}
-									// min: 0,
-									// max: Math.ceil(Math.max(...data.labels))
 								},
 								y:{
 									type: 'linear',
@@ -670,101 +684,6 @@ export function deactivate() {
 	console.log("Deactivated");
 }
 
-function getWorkspaceDirectory() {
-	// Get the current workspace folder
-	let workspaceFolder = vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders[0];
-	if (workspaceFolder) {
-		return workspaceFolder.uri.fsPath; // If a workspace is opened, return its path
-	} else if (vscode.window.activeTextEditor) {
-		// If no workspace is opened but a file is active, use its directory
-		const filePath = vscode.window.activeTextEditor.document.uri.fsPath;
-		return path.dirname(filePath);
-	} else {
-		// Handle cases where no workspace is open and no file is active
-		return null;
-	}
-}
-
-function configSalTerminal(extensionPath: string) {
-	if (!salTerminal) {
-		salTerminal = vscode.window.createTerminal('SAL Terminal');
-	}
-	if (!salConfig) {
-		let workspaceFolder = vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders[0] && vscode.workspace.workspaceFolders[0].uri.fsPath;
-		if (!workspaceFolder) {
-			vscode.window.showErrorMessage('No workspace found');
-			return;
-		}
-
-		// Change to the current directory directory
-		let scriptDirectory = path.dirname(__dirname);
-		salTerminal.sendText(`cd  "${workspaceFolder}"`);
-		salTerminal.sendText(`clear`);
-		salTerminal.sendText(`bash "${scriptDirectory}/playback-scripts/create_session.sh"`);
-
-		setNyquistPreferences(extensionPath);
-	}
-	salTerminal.show();
-}
-
-function copyWavFile() {
-	const username = getCurrentUsername().toLowerCase();
-	const tempWavPath = `/tmp/${username}-temp.wav`;
-	const workspaceDir = getWorkspaceDirectory();
-	if (!workspaceDir) {
-		vscode.window.showErrorMessage("No workspace or active file found.");
-		return null;
-	}
-	const tmpDirPath = `${workspaceDir}/.tmp`;
-	if (!fs.existsSync(tmpDirPath)) {
-        fs.mkdirSync(tmpDirPath);
-        console.log('The .tmp directory has been created.');
-    }
-
-
-	// iteratively find the current index for the temp_num.wav file
-	let index = 0;
-	let destinationPath = '';
-	while (true) {
-		destinationPath = `${tmpDirPath}/temp_${index}.wav`;
-		try {
-			fs.accessSync(destinationPath, fs.constants.F_OK);
-			index++;
-		}
-		catch (err) {
-			break;
-		}
-	}
-
-	try {
-		// Check if the file exists
-		fs.accessSync(tempWavPath, fs.constants.F_OK);
-
-		// If the file exists, copy it
-		fs.renameSync(tempWavPath, destinationPath);
-		console.log('File moved successfully.');
-
-		rePlayFile = `temp_${index}.wav`;
-		vscode.window.showInformationMessage(`Moved ${tempWavPath} to ${destinationPath}`);
-	} catch (err) {
-		const error = err as NodeJS.ErrnoException;
-		if (error.code === 'ENOENT') {
-			// Handle the case where the file does not exist
-			vscode.window.showErrorMessage(`File not found: ${tempWavPath}`);
-		} else {
-			// Handle other possible errors
-			console.error('Error:', error);
-		}
-		return null;
-	}
-
-	return destinationPath;
-}
-
-function getCurrentUsername() {
-	return os.userInfo().username;
-}
-
 class NyquistTreeDataProvider implements vscode.TreeDataProvider<NyquistItem> {
     private _onDidChangeTreeData: vscode.EventEmitter<NyquistItem | undefined | null> = new vscode.EventEmitter<NyquistItem | undefined | null>();
     readonly onDidChangeTreeData: vscode.Event<NyquistItem | undefined | null> = this._onDidChangeTreeData.event;
@@ -893,7 +812,7 @@ function setNyquistPreferences(extensionPath: string) {
 	console.log(sampleRate);
 	console.log(controlRate);
 	console.log(nyquistDir);
-
+	
 	const preferencePath = `${extensionPath}/playback-scripts/.preferences.lsp`;
 	// write the preferences to the pipe
 	let content = '';
@@ -922,9 +841,8 @@ function setNyquistPreferences(extensionPath: string) {
 				}
 			});
 		}
-	}
-	);
-	
+	});
+
 	setTimeout(() => {
 		salConfig = true;
 	}

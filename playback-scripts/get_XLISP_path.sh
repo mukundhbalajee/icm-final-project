@@ -58,20 +58,11 @@ set_preferences() {
     echo "Setting preferences..."
     # Check if the named pipe exists, wait for it to be created if it doesn't
     PREF_PIPE_FILE="$dir_path/.preferences.lsp"
-    while [[ ! -e "$PREF_PIPE_FILE" ]]; do
-        sleep 1
-    done
-    # Copy contents in preferences file to named pipe
-    cat "$PREF_PIPE_FILE" > "$PIPE_FILE"
-    rm -f "$PREF_PIPE_FILE"
-}
-
-# Function to set the preferences by dumping the sal commands in 
-# the preferences file to a named pipe
-set_preferences() {
-    echo "Setting preferences..."
-    # Check if the named pipe exists, wait for it to be created if it doesn't
-    PREF_PIPE_FILE="$dir_path/.preferences.lsp"
+    if [[ ! -p "$PREF_PIPE_FILE" ]]; then
+        echo "Waiting for preferences pipe to be created..."
+        mkfifo "$PREF_PIPE_FILE"
+    fi
+    
     while [[ ! -e "$PREF_PIPE_FILE" ]]; do
         sleep 1
     done
@@ -135,7 +126,7 @@ if [[ -f "$PATH_FILE" ]]; then
         fi
     fi
 fi
-set_preferences
+# set_preferences
 
 clear
 exit
