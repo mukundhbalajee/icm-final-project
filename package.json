@@ -1,9 +1,9 @@
 {
   "name": "nyquist-sal-extension",
-  "displayName": "nyquist-sal-extension",
+  "displayName": "NyquistIDE SAL Extension",
   "description": "vscode extension for SAL",
   "publisher": "MukundhBalajee",
-  "version": "0.0.2",
+  "version": "1.0.0",
   "engines": {
     "vscode": "^1.86.0"
   },
