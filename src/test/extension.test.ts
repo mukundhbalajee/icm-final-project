@@ -29,20 +29,20 @@ suite('Extension Test Suite', () => {
 
 	test('Extension Activation', () => {
 		console.log('Extension is activated');
-		const extension = vscode.extensions.getExtension('icm.code-symphony'); // Replace with your actual extension ID
+		const extension = vscode.extensions.getExtension('icm.nyquist-sal-extension'); // Replace with your actual extension ID
 		assert.ok(extension);		
 	});
 
 	test('SAL Terminal Creation', async () => {
 		const terminalName = 'SAL Terminal';
-		const extension = vscode.extensions.getExtension('icm.code-symphony'); // Replace with your actual extension ID
+		const extension = vscode.extensions.getExtension('icm.nyquist-sal-extension'); // Replace with your actual extension ID
 		await extension!.activate(); // activate extension
 		assert.ok(extension);
 		assert.ok(vscode.window.terminals.find(t => t.name === terminalName), 'SAL Terminal was not created');
 	});
 
 	test('SAL File Open Listener', async () => {
-		const extension = vscode.extensions.getExtension('icm.code-symphony'); // Replace with your actual extension ID
+		const extension = vscode.extensions.getExtension('icm.nyquist-sal-extension'); // Replace with your actual extension ID
 		assert.ok(extension);
 		// activate extension
 		// await extension!.activate();
@@ -57,7 +57,7 @@ suite('Extension Test Suite', () => {
 
 	test('SAL File Create Listener', async () => {
 		// get extension path
-		const extension = vscode.extensions.getExtension('icm.code-symphony'); // Replace with your actual extension ID
+		const extension = vscode.extensions.getExtension('icm.nyquist-sal-extension'); // Replace with your actual extension ID
 		assert.ok(extension);
 		const extensionPath = extension.extensionPath;
 		// open workspace at extension path
@@ -104,7 +104,7 @@ suite('Extension Test Suite', () => {
 		await vscode.window.showTextDocument(doc);
 
 		// Execute the command
-		await vscode.commands.executeCommand('code-symphony.runFile');
+		await vscode.commands.executeCommand('nyquist-sal-extension.runFile');
 
 		// Verify expected outcome, such as a message being shown, or the terminal receiving certain text
 	});
